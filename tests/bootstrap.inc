@@ -5,6 +5,8 @@
  * Functions that need to be loaded on every Drupal request.
  */
 
+require_once('/var/www/drupal-7.15/includes/cache.inc');
+
 /**
  * The current system version.
  */
