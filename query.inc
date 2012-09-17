@@ -49,7 +49,8 @@ class InsertQuery_ibm extends InsertQuery {
     // databases, such as DB2, this is also a notable performance boost.
     $transaction = $this->connection->startTransaction();
 
-    $stmt = $this->connection->prepareQuery((string) $this)->getStatement(NULL);
+//    $stmt = $this->connection->prepareQuery((string) $this)->getStatement(NULL);
+    $stmt = $this->connection->prepareQuery((string) $this);
 
     try {
       $blobs = array();
@@ -80,7 +81,7 @@ class InsertQuery_ibm extends InsertQuery {
             }
           }
           elseif ($insert_values[$idx] === '') {
-            $stmt->bindValue(':db_insert_placeholder_' . $max_placeholder++, OCI_EMPTY_STRING_PLACEHOLDER);
+            $stmt->bindValue(':db_insert_placeholder_' . $max_placeholder++, DB2_EMPTY_STRING_PLACEHOLDER);
           }
           else {
             $stmt->bindParam(':db_insert_placeholder_' . $max_placeholder++, $insert_values[$idx]);
@@ -118,7 +119,7 @@ class InsertQuery_ibm extends InsertQuery {
         $arguments = $this->fromQuery->getArguments();
         foreach ($arguments as $key => $value) {
           if ($arguments[$key] === '') {
-            $stmt->bindValue($key, OCI_EMPTY_STRING_PLACEHOLDER);
+            $stmt->bindValue($key, DB2_EMPTY_STRING_PLACEHOLDER);
           }
           else {
             $stmt->bindParam($key, $arguments[$key]);
@@ -218,7 +219,7 @@ class TruncateQuery_ibm extends TruncateQuery {
     // Create a sanitized comment string to prepend to the query.
     $comments = $this->connection->makeComment($this->comments);
 
-    return $comments . 'TRUNCATE TABLE {' . $this->table . '} ';
+    return $comments . 'TRUNCATE TABLE {' . $this->table . '} IMMEDIATE';
   }
 }
 
@@ -297,7 +298,8 @@ class UpdateQuery_ibm extends UpdateQuery {
 
     // Because we filter $fields the same way here and in __toString(), the
     // placeholders will all match up properly.
-    $stmt = $this->connection->prepareQuery((string) $this)->getStatement(NULL);
+ //   $stmt = $this->connection->prepareQuery((string) $this)->getStatement(NULL);
+    $stmt = $this->connection->prepareQuery((string) $this);
 
     // Expressions take priority over literal fields, so we process those first
     // and remove any literal fields that conflict.
@@ -309,7 +311,7 @@ class UpdateQuery_ibm extends UpdateQuery {
           // which is a fairly safe assumption to make since in most cases
           // it would be an invalid query anyway.
           if ($data['arguments'][$placeholder] === '') {
-            $stmt->bindValue($placeholder, OCI_EMPTY_STRING_PLACEHOLDER);
+            $stmt->bindValue($placeholder, DB2_EMPTY_STRING_PLACEHOLDER);
           }
           else {
             $stmt->bindParam($placeholder, $data['arguments'][$placeholder]);
@@ -338,7 +340,7 @@ class UpdateQuery_ibm extends UpdateQuery {
         }
       }
       elseif ($fields[$field] === '') {
-        $stmt->bindValue(':db_update_placeholder_' . $max_placeholder++, OCI_EMPTY_STRING_PLACEHOLDER);
+        $stmt->bindValue(':db_update_placeholder_' . $max_placeholder++, DB2_EMPTY_STRING_PLACEHOLDER);
       }
       else {
         $stmt->bindParam(':db_update_placeholder_' . $max_placeholder++, $fields[$field]);
@@ -351,7 +353,7 @@ class UpdateQuery_ibm extends UpdateQuery {
       $arguments = $this->condition->arguments();
       foreach ($arguments as $placeholder => $value) {
         if ($arguments[$placeholder] === '') {
-          $stmt->bindValue($placeholder, OCI_EMPTY_STRING_PLACEHOLDER);
+          $stmt->bindValue($placeholder, DB2_EMPTY_STRING_PLACEHOLDER);
         }
         else {
           $stmt->bindParam($placeholder, $arguments[$placeholder]);

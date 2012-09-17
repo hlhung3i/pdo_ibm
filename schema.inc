@@ -13,6 +13,58 @@
 class DatabaseSchema_ibm extends DatabaseSchema {
 
   /**
+   * Maximum length of a table comment in MySQL.
+   */
+  const COMMENT_MAX_TABLE = 60;
+
+  /**
+   * Maximum length of a column comment in MySQL.
+   */
+  const COMMENT_MAX_COLUMN = 255;
+
+  /**
+   * Get information about the table and database name from the prefix.
+   *
+   * @return
+   *   A keyed array with information about the database, table name and prefix.
+   */
+  protected function getPrefixInfo($table = 'default', $add_prefix = TRUE) {
+    $info = array('prefix' => $this->connection->tablePrefix($table));
+    if ($add_prefix) {
+      $table = $info['prefix'] . $table;
+    }
+    if (($pos = strpos($table, '.')) !== FALSE) {
+      $info['database'] = substr($table, 0, $pos);
+      $info['table'] = substr($table, ++$pos);
+    }
+    else {
+      $db_info = Database::getConnectionInfo();
+      $info['database'] = $db_info['default']['database'];
+      $info['table'] = $table;
+    }
+    return $info;
+  }
+
+  /**
+   * Build a condition to match a table name against a standard information_schema.
+   *
+   * MySQL uses databases like schemas rather than catalogs so when we build
+   * a condition to query the information_schema.tables, we set the default
+   * database as the schema unless specified otherwise, and exclude table_catalog
+   * from the condition criteria.
+   */
+  protected function buildTableNameCondition($table_name, $operator = '=', $add_prefix = TRUE) {
+    $info = $this->connection->getConnectionOptions();
+
+    $table_info = $this->getPrefixInfo($table_name, $add_prefix);
+
+    $condition = new DatabaseCondition('AND');
+    $condition->condition('table_schema', $table_info['database']);
+    $condition->condition('table_name', $table_info['table'], $operator);
+    return $condition;
+  }
+
+  /**
    * A cache of information about blob columns of tables.
    *
    * This is collected by DatabaseConnection_ibm->queryTableInformation(),
@@ -36,29 +88,35 @@ class DatabaseSchema_ibm extends DatabaseSchema {
    *     - 'blob_fields' that lists all the blob fields in the table.
    */
   public function queryTableInformation($table, $rebuild = FALSE) {
+
     // Generate a key to reference this table's information on.
     $table_name = $this->connection->prefixTables('{' . $table . '}');
     $table_name = $this->connection->escapeForDB2($table_name);
+		$db_user = $this->connection->getConnectionOptions()['username'];
 
     if (!isset($this->tableInformation[$table]['fields']) || $rebuild) {
       $this->tableInformation[$table]['fields'] = array();
 
       // Don't use {} around user_tab_cols table.
-      $results = $this->connection->query("SELECT COLUMN_NAME FROM USER_TAB_COLS WHERE DATA_TYPE = 'BLOB' AND LOWER(TABLE_NAME) = :table_name", array(':table_name' => strtolower($table_name)));
+      // TODO: !! Need Rewrite to get Primary Key column for THIS user
+      $results = $this->connection->query("SELECT COLNAME FROM SYSCAT.COLUMNS COL LEFT JOIN SYSCAT.TABLES TAB ON COL.TABNAME = TAB.TABNAME AND COL.TABSCHEMA = TAB.TABSCHEMA WHERE COL.TYPENAME = 'BLOB' AND LCASE(COL.TABNAME) = :table_name AND LCASE(TAB.OWNER) = :db_user", array(':table_name' => strtolower($table_name), ':db_user' => strtolower($db_user)));
       foreach ($results as $result) {
-        $field = strtolower($this->connection->restoreForDB2($result->column_name));
+        $field = strtolower($this->connection->restoreForDB2($result->colname));
         $this->tableInformation[$table]['fields'][$field]['type'] = 'blob';
       }
 
       // Don't use {} around user_constraints and user_cons_columns table.
-      $results = $this->connection->query("SELECT COLS.TABLE_NAME, COLS.COLUMN_NAME FROM USER_CONSTRAINTS CONS, USER_CONS_COLUMNS COLS, USER_TAB_COLS TCOLS WHERE CONS.CONSTRAINT_TYPE = 'P' AND CONS.CONSTRAINT_NAME = COLS.CONSTRAINT_NAME AND CONS.OWNER = COLS.OWNER AND COLS.TABLE_NAME = TCOLS.TABLE_NAME AND COLS.COLUMN_NAME = TCOLS.COLUMN_NAME AND TCOLS.DATA_TYPE = 'NUMBER' AND LOWER(COLS.TABLE_NAME) = :table_name", array(':table_name' => strtolower($table_name)));
+//      $results = $this->connection->query("SELECT COLS.TABLE_NAME, COLS.COLUMN_NAME FROM USER_CONSTRAINTS CONS, USER_CONS_COLUMNS COLS, USER_TAB_COLS TCOLS WHERE CONS.CONSTRAINT_TYPE = 'P' AND CONS.CONSTRAINT_NAME = COLS.CONSTRAINT_NAME AND CONS.OWNER = COLS.OWNER AND COLS.TABLE_NAME = TCOLS.TABLE_NAME AND COLS.COLUMN_NAME = TCOLS.COLUMN_NAME AND TCOLS.DATA_TYPE = 'NUMBER' AND LCASE(COLS.TABLE_NAME) = :table_name", array(':table_name' => strtolower($table_name)));
+      // TODO: !! Need Rewrite to get Primary Key column for THIS user
+      $results = $this->connection->query("SELECT COLNAME FROM SYSCAT.COLUMNS COL LEFT JOIN SYSCAT.TABLES TAB ON COL.TABNAME = TAB.TABNAME AND COL.TABSCHEMA = TAB.TABSCHEMA WHERE LCASE(COL.TABNAME) = :table_name AND COL.KEYSEQ > 0 AND LCASE(TAB.OWNER) = :db_user ORDER BY KEYSEQ ASC", array(':table_name' => strtolower($table_name), ':db_user' => strtolower($db_user)));
       foreach ($results as $result) {
-        $field = strtolower($this->connection->restoreForDB2($result->column_name));
+        $field = strtolower($this->connection->restoreForDB2($result->colname));
         $sequence_name = $this->connection->makeSequenceName($table, $field);
         $sequence_name = $this->connection->escapeForDB2($sequence_name);
 
-        // Don't use {} around user_sequences table.
-        if ($this->connection->query("SELECT 1 FROM USER_SEQUENCES WHERE LOWER(SEQUENCE_NAME) = :sequence_name", array(':sequence_name' => strtolower($sequence_name)))->fetchField()) {
+        // Don't use {} around SYSCAT.SEQUENCES table.
+      // TODO: !! Need Rewrite to filter record for THIS user
+        if ($this->connection->query('SELECT 1 FROM SYSCAT.SEQUENCES WHERE LCASE(SEQNAME) = :sequence_name AND LCASE(OWNER) = :sequence_owner', array(':sequence_name' => strtolower($sequence_name), ':sequence_owner' => strtolower($db_user)))->fetchField()) {
           $this->tableInformation[$table]['fields'][$field]['type'] = 'serial';
         }
       }
@@ -67,25 +125,46 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     return $this->tableInformation[$table];
   }
 
+  public function triggerExists($table, $field, $trg_suffix) {
+    $trigger_name = $this->prefixNonTable($table, $field, 'trg');
+		$db_user = $this->connection->getConnectionOptions()['username'];
+
+    // Don't use {} around user_tables table.
+    return (bool) $this->connection->query('SELECT 1 FROM SYSCAT.TRIGGERS WHERE LCASE(TRIGNAME) = :trigger_name AND LCASE(OWNER) = :db_user', array(':trigger_name' => strtolower($trigger_name), ':db_user' => strtolower($db_user)))->fetchField();
+  }
+
+  public function dropTrigger($table, $field, $trg_suffix='trg') {
+    if (!$this->tableExists($table, $field, $trg_suffix)) {
+      return FALSE;
+    }
+
+    // Drop Trigger
+    $this->connection->query('DROP TRIGGER ' . $this->prefixNonTable($table, $field, 'trg'));
+    return TRUE;
+  }
+
   public function tableExists($table) {
     $table_name = $this->connection->prefixTables('{' . $table . '}');
     $table_name = $this->connection->escapeForDB2($table_name);
+		$db_user = $this->connection->getConnectionOptions()['username'];
 
     // Don't use {} around user_tables table.
-    return (bool) $this->connection->query('SELECT 1 FROM USER_TABLES WHERE LOWER(TABLE_NAME) = :table_name', array(':table_name' => strtolower($table_name)))->fetchField();
+    return (bool) $this->connection->query('SELECT 1 FROM SYSCAT.TABLES WHERE LCASE(TABNAME) = :table_name AND LCASE(OWNER) = :db_user', array(':table_name' => strtolower($table_name), ':db_user' => strtolower($db_user)))->fetchField();
   }
 
   public function findTables($table_expression) {
+		$db_user = $this->connection->getConnectionOptions()['username'];
+
     // We need to manually search for the table name, since fetched
     // result should be restored as original long identifier.
     $table_expression = '/^' . strtr($table_expression, '%', '.*') . '$/';
 
     // Don't use {} around user_tables table.
-    $results = $this->connection->query('SELECT TABLE_NAME FROM USER_TABLES');
+    $results = $this->connection->query('SELECT TABNAME FROM SYSCAT.TABLES WHERE LCASE(OWNER) = :db_user', array(':db_user' => strtolower($db_user)));
 
     $tables = array();
     foreach ($results as $result) {
-      $table_name = $this->connection->restoreForDB2(strtolower($result->table_name));
+      $table_name = $this->connection->restoreForDB2(strtolower($result->tabname));
       if (preg_match($table_expression, $table_name)) {
         $tables[$table_name] = $table_name;
       }
@@ -98,9 +177,10 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     $table_name = $this->connection->prefixTables('{' . $table . '}');
     $table_name = $this->connection->escapeForDB2($table_name);
     $column_name = $this->connection->escapeForDB2($column);
+		$db_user = $this->connection->getConnectionOptions()['username'];
 
     // Don't use {} around user_tab_cols table.
-    return (bool) $this->connection->query('SELECT 1 FROM USER_TAB_COLS WHERE LOWER(TABLE_NAME) = :table_name AND LOWER(COLUMN_NAME) = :column_name', array(':table_name' => strtolower($table_name), ':column_name' => strtolower($column_name)))->fetchField();
+    return (bool) $this->connection->query('SELECT 1 FROM SYSCAT.COLUMNS COL LEFT JOIN SYSCAT.TABLES TAB ON COL.TABNAME = TAB.TABNAME AND COL.TABSCHEMA = TAB.TABSCHEMA WHERE LCASE(COL.TABNAME) = :table_name AND LCASE(COL.COLNAME) = :column_name AND LCASE(TAB.OWNER) = :db_user', array(':table_name' => strtolower($table_name), ':column_name' => strtolower($column_name), ':db_user' => strtolower($db_user)))->fetchField();
   }
 
   /**
@@ -118,8 +198,15 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     $table_name = $this->connection->escapeForDB2($table_name);
 
     $sql_fields = array();
+		// For DB2, Primary key and Unique Key column reqired to be NOT NULL
+		//  Force inject NOT NULL in table creation DDL
     foreach ($table['fields'] as $field_name => $field) {
-      $sql_fields[] = $this->createFieldSql($field_name, $this->processField($field));
+      if ((isset($table['primary key']) && is_array($table['primary key']) && in_array($field_name, $table['primary key'])) || (isset($table['unique keys']) && is_array($table['unique keys']) && in_array($field_name, array_keys($table['unique keys'])))) {
+        $force_not_null = TRUE;
+      } else {
+        $force_not_null = FALSE;
+      }
+      $sql_fields[] = $this->createFieldSql($field_name, $this->processField($field), $force_not_null);
     }
 
     $sql_keys = array();
@@ -182,25 +269,25 @@ class DatabaseSchema_ibm extends DatabaseSchema {
    * @param $spec
    *    The field specification, as per the schema data structure format.
    */
-  protected function createFieldSql($name, $spec) {
+  protected function createFieldSql($name, $spec, $force_not_null=FALSE) {
     $sql = $name . ' ' . $spec['ibm_type'];
 
-    if (isset($spec['type']) && $spec['type'] == 'serial') {
-      unset($spec['not null']);
-    }
+//    if (isset($spec['type']) && $spec['type'] == 'serial') {
+//      unset($spec['not null']);
+//    }
 
     // With poor DB2 we have a lots of limitation.
     if (isset($spec['precision']) && isset($spec['scale'])) {
-      $sql .= '(' . min($spec['precision'], OCI_MAX_NUMBER_LENGTH) . ', ' . $spec['scale'] . ')';
+      $sql .= '(' . min($spec['precision'], DB2_MAX_NUMBER_LENGTH) . ', ' . $spec['scale'] . ')';
     }
-    elseif ($spec['ibm_type'] == 'NVARCHAR2') {
-      $sql .= '(' . (isset($spec['length']) ? min($spec['length'], OCI_MAX_NVARCHAR2_LENGTH) : OCI_MAX_NVARCHAR2_LENGTH) . ')';
+    elseif ($spec['ibm_type'] == 'VARCHAR') {
+      $sql .= '(' . (isset($spec['length']) ? min($spec['length'], DB2_MAX_NVARCHAR2_LENGTH) : DB2_MAX_NVARCHAR2_LENGTH) . ')';
     }
-    elseif ($spec['ibm_type'] == 'NCHAR') {
-      $sql .= '(' . (isset($spec['length']) ? min($spec['length'], OCI_MAX_NCHAR_LENGTH) : OCI_MAX_NCHAR_LENGTH) . ')';
+    elseif ($spec['ibm_type'] == 'CHAR') {
+      $sql .= '(' . (isset($spec['length']) ? min($spec['length'], DB2_MAX_NCHAR_LENGTH) : DB2_MAX_NCHAR_LENGTH) . ')';
     }
-    elseif ($spec['ibm_type'] == 'NUMBER') {
-      $sql .= '(' . (isset($spec['length']) ? min($spec['length'], OCI_MAX_NUMBER_LENGTH) : OCI_MAX_NUMBER_LENGTH) . ')';
+    elseif ($spec['ibm_type'] == 'DECIMAL') {
+      $sql .= '(' . (isset($spec['length']) ? min($spec['length'], DB2_MAX_NUMBER_LENGTH) : DB2_MAX_NUMBER_LENGTH) . ')';
     }
 
     // DB2 require DEFAULT before NULL.
@@ -208,7 +295,7 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       if ($spec['ibm_type'] == 'BLOB') {
         $default = 'EMPTY_BLOB()';
       }
-      elseif ($spec['ibm_type'] == 'NVARCHAR2' || $spec['ibm_type'] == 'NCHAR') {
+      elseif ($spec['ibm_type'] == 'VARCHAR' || $spec['ibm_type'] == 'CHAR') {
         $default = "'" . $spec['default'] . "'";
       }
       else {
@@ -217,13 +304,8 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       $sql .= " DEFAULT $default";
     }
 
-    if (isset($spec['not null'])) {
-      if ($spec['not null']) {
-        $sql .= ' NOT NULL';
-      }
-      else {
-        $sql .= ' NULL';
-      }
+    if ((isset($spec['not null']) && $spec['not null']) || $force_not_null) {
+      $sql .= ' NOT NULL';
     }
 
     // DB2 require CHECK constraint as the last condition.
@@ -231,6 +313,7 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       $sql .= ' CHECK (' . $name . ' >= 0)';
     }
 
+print 'SQL : ' . $sql . '<br />';
     return $sql;
   }
 
@@ -241,6 +324,7 @@ class DatabaseSchema_ibm extends DatabaseSchema {
    *   A field description array, as specified in the schema documentation.
    */
   protected function processField($field) {
+
     if (!isset($field['size'])) {
       $field['size'] = 'normal';
     }
@@ -272,40 +356,46 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     // database types back into schema types.
     // $map does not use drupal_static as its value never changes.
     static $map = array(
-      'varchar:normal'  => 'NVARCHAR2',
-      'char:normal'     => 'NCHAR',
+      'varchar:normal'  => 'VARCHAR',
+      'char:normal'     => 'CHAR',
 
-      'text:tiny'       => 'NVARCHAR2',
-      'text:small'      => 'NVARCHAR2',
-      'text:medium'     => 'NVARCHAR2',
-      'text:big'        => 'NVARCHAR2',
-      'text:normal'     => 'NVARCHAR2',
+      'text:tiny'       => 'VARCHAR',
+      'text:small'      => 'VARCHAR',
+      'text:medium'     => 'VARCHAR',
+      'text:big'        => 'VARCHAR',
+      'text:normal'     => 'VARCHAR',
 
-      'serial:tiny'     => 'NUMBER',
-      'serial:small'    => 'NUMBER',
-      'serial:medium'   => 'NUMBER',
-      'serial:big'      => 'NUMBER',
-      'serial:normal'   => 'NUMBER',
+      'serial:tiny'     => 'INTEGER',
+      'serial:small'    => 'INTEGER',
+      'serial:medium'   => 'INTEGER',
+      'serial:big'      => 'BIGINT',
+      'serial:normal'   => 'INTEGER',
 
-      'int:tiny'        => 'NUMBER',
-      'int:small'       => 'NUMBER',
-      'int:medium'      => 'NUMBER',
-      'int:big'         => 'NUMBER',
-      'int:normal'      => 'NUMBER',
+      'int:tiny'        => 'SMALLINT',
+      'int:small'       => 'SMALLINT',
+      'int:medium'      => 'INTEGER',
+      'int:big'         => 'BIGINT',
+      'int:normal'      => 'INTEGER',
 
       'float:tiny'      => 'FLOAT',
       'float:small'     => 'FLOAT',
       'float:medium'    => 'FLOAT',
-      'float:big'       => 'FLOAT',
+      'float:big'       => 'DOUBLE',
       'float:normal'    => 'FLOAT',
 
-      'numeric:normal'  => 'NUMBER',
+      'numeric:normal'  => 'DECIMAL',
 
       'blob:big'        => 'BLOB',
       'blob:normal'     => 'BLOB',
     );
     return $map;
   }
+
+  protected function _reorgTableSql($table) {
+		$sql = "CALL SYSPROC.ADMIN_CMD('REORG TABLE {" . $table . "}')";
+//		echo 'REORG after Adding Primary Key<br /> SQL = ' . $sql . '<br />'; // JUNK
+		return $sql;
+	}
 
   protected function _createKeySql($fields) {
     $return = array();
@@ -321,6 +411,8 @@ class DatabaseSchema_ibm extends DatabaseSchema {
   }
 
   public function renameTable($table, $new_name) {
+		$db_user = $this->connection->getConnectionOptions()['username'];
+
     if (!$this->tableExists($table)) {
       throw new DatabaseSchemaObjectDoesNotExistException(t("Cannot rename %table to %table_new: table %table doesn't exist.", array('%table' => $table, '%table_new' => $new_name)));
     }
@@ -332,23 +424,21 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     $prefixed_new_name = $this->connection->prefixTables('{' . $new_name . '}');
 
     // Rename Indexes.
-    $results = $this->connection->query("SELECT INDEX_NAME FROM USER_INDEXES WHERE LOWER(TABLE_NAME) = :table_name", array(':table_name' => strtolower($this->connection->escapeForDB2($prefixed_table))));
+    $results = $this->connection->query("SELECT INDNAME FROM SYSCAT.INDEXES WHERE LCASE(TABNAME) = :table_name AND LCASE(OWNER) = :db_user", array(':table_name' => strtolower($this->connection->escapeForDB2($prefixed_table)), ':db_user' => strtolower($db_user)));
     foreach ($results as $result) {
-      $prefixed_index = strtolower($this->connection->restoreForDB2($result->index_name));
+      $prefixed_index = strtolower($this->connection->restoreForDB2($result->indname));
       $prefixed_new_index = strtr($prefixed_index, array($prefixed_table => $prefixed_new_name));
-      $this->connection->query('ALTER INDEX ' . $prefixed_index . ' RENAME TO ' . $prefixed_new_index);
+      $this->connection->query('RENAME INDEX ' . $prefixed_index . ' TO ' . $prefixed_new_index);
     }
 
     // Rename Table.
-    $this->connection->query('ALTER TABLE ' . $prefixed_table . ' RENAME TO ' . $prefixed_new_name);
+    $this->connection->query('RENAME TABLE ' . $prefixed_table . ' TO ' . $prefixed_new_name);
 
     // Drop Trigger, rename Sequence, and re-create Trigger.
     $schema = $this->queryTableInformation($table);
     foreach ($schema['fields'] as $field => $value) {
       if ($value['type'] == 'serial') {
-        $this->connection->query('DROP TRIGGER ' . $this->prefixNonTable($table, $field, 'trg'));
-        $this->connection->query('RENAME ' . $this->connection->makeSequenceName($table, $field) . ' TO ' . $this->connection->makeSequenceName($new_name, $field));
-        $this->connection->query($this->_createTriggerSql($new_name, $field));
+        $this->_renameSeqTrg($table, $field, $new_name, $field);
       }
     }
   }
@@ -358,7 +448,7 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       return FALSE;
     }
 
-    // Drop Trigger and Sequence.
+    // Drop Trigger and Sequence before Table.
     $schema = $this->queryTableInformation($table);
     foreach ($schema['fields'] as $field => $value) {
       if ($value['type'] == 'serial') {
@@ -367,7 +457,7 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       }
     }
 
-    $this->connection->query('DROP TABLE {' . $table . '} CASCADE CONSTRAINTS');
+    $this->connection->query('DROP TABLE {' . $table . '}');
     return TRUE;
   }
 
@@ -389,16 +479,22 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       $spec['not null'] = FALSE;
     }
 
+		// DB2 Assume the new column is neither Primary Key nor Unique Key
     $query = 'ALTER TABLE ' . $table_name . ' ADD ';
     $query .= $this->createFieldSql($field, $this->processField($spec));
     $this->connection->query($query);
+
+    // Reorg Table after ALTER TABLE
+    $this->connection->query($this->_reorgTableSql($table));
 
     if (isset($spec['initial'])) {
       $this->connection->query('UPDATE ' . $table_name . ' SET ' . $field_name . ' = :initial_value', array(':initial_value' => $spec['initial']));
     }
 
     if ($fixnull) {
-      $this->connection->query('ALTER TABLE ' . $table_name . ' MODIFY (' . $field_name . ' NOT NULL)');
+      $this->connection->query('ALTER TABLE ' . $table_name . ' ALTER COLUMN ' . $field_name . ' SET NOT NULL');
+      // Reorg Table after ALTER TABLE
+      $this->connection->query($this->_reorgTableSql($table));
     }
 
     if (isset($new_keys)) {
@@ -432,6 +528,8 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       // No action required.
     }
     $this->connection->query('ALTER TABLE {' . $table . '} DROP COLUMN ' . $field);
+    // Reorg Table after ALTER TABLE
+    $this->connection->query($this->_reorgTableSql($table));
     return TRUE;
   }
 
@@ -451,7 +549,9 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       $default = is_string($default) ? "'$default'" : $default;
     }
 
-    $this->connection->query('ALTER TABLE ' . $table_name . ' MODIFY (' . $field_name . ' DEFAULT ' . $default . ')');
+    $this->connection->query('ALTER TABLE ' . $table_name . ' ALTER COLUMN ' . $field_name . ' SET DEFAULT ' . $default . '');
+    // Reorg Table after ALTER TABLE
+    $this->connection->query($this->_reorgTableSql($table));
   }
 
   public function fieldSetNoDefault($table, $field) {
@@ -463,16 +563,19 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     $table_name = $this->connection->escapeForDB2($table_name);
     $field_name = $this->connection->escapeForDB2($field);
 
-    $this->connection->query('ALTER TABLE ' . $table_name . ' MODIFY (' . $field_name . ' DEFAULT NULL)');
+    $this->connection->query('ALTER TABLE ' . $table_name . ' ALTER COLUMN ' . $field_name . ' SET DEFAULT NULL');
+    // Reorg Table after ALTER TABLE
+    $this->connection->query($this->_reorgTableSql($table));
   }
 
   public function indexExists($table, $name) {
     $table_name = $this->connection->prefixTables('{' . $table . '}');
     $table_name = $this->connection->escapeForDB2($table_name);
     $index_name = $this->connection->escapeForDB2($this->prefixNonTable($table, $name, 'ix'));
+		$db_user = $this->connection->getConnectionOptions()['username'];
 
     // Don't use {} around user_indexes table.
-    return (bool) $this->connection->query('SELECT 1 FROM USER_INDEXES WHERE LOWER(TABLE_NAME) = :table_name AND LOWER(INDEX_NAME) = :index_name', array(':table_name' => strtolower($table_name), ':index_name' => strtolower($index_name)))->fetchField();
+    return (bool) $this->connection->query('SELECT 1 FROM SYSCAT.INDEXES WHERE LCASE(TABNAME) = :table_name AND LCASE(INDNAME) = :index_name AND LCASE(OWNER) = :db_user', array(':table_name' => strtolower($table_name), ':index_name' => strtolower($index_name), ':db_user' => strtolower($db_user)))->fetchField();
   }
 
   public function constraintExists($table) {
@@ -481,9 +584,10 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     $table_name = $this->connection->prefixTables('{' . $table . '}');
     $table_name = $this->connection->escapeForDB2($table_name);
     $constraint_name = $this->connection->escapeForDB2(implode('_', $args));
+		$db_user = $this->connection->getConnectionOptions()['username'];
 
     // Don't use {} around user_cons_columns table.
-    return (bool) $this->connection->query('SELECT 1 FROM USER_CONS_COLUMNS WHERE LOWER(TABLE_NAME) = :table_name AND LOWER(COLUMN_NAME) = :column_name', array(':table_name' => strtolower($table_name), ':column_name' => strtolower($constraint_name)))->fetchField();
+    return (bool) $this->connection->query('SELECT 1 FROM SYSCAT.TABCONST WHERE LCASE(TABNAME) = :table_name AND LCASE(CONSTNAME) = :constraint_name AND LCASE(OWNER) = :db_user', array(':table_name' => strtolower($table_name), ':constraint_name' => strtolower($constraint_name), ':db_user' => strtolower($db_user)))->fetchField();
   }
 
   public function addPrimaryKey($table, $fields) {
@@ -495,6 +599,8 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     }
 
     $this->connection->query('ALTER TABLE {' . $table . '} ADD CONSTRAINT ' . $this->prefixNonTable($table, 'pk') . ' PRIMARY KEY (' . implode(', ', $fields) . ')');
+		// Reorg Table after ALTER TABLE
+    $this->connection->query($this->_reorgTableSql($table));
   }
 
   public function dropPrimaryKey($table) {
@@ -503,6 +609,8 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     }
 
     $this->connection->query('ALTER TABLE {' . $table . '} DROP CONSTRAINT ' . $this->prefixNonTable($table, 'pk'));
+		// Reorg Table after ALTER TABLE
+    $this->connection->query($this->_reorgTableSql($table));
     return TRUE;
   }
 
@@ -515,6 +623,8 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     }
 
     $this->connection->query('ALTER TABLE {' . $table . '} ADD CONSTRAINT ' . $this->prefixNonTable($table, $name, 'uix') . ' UNIQUE (' . implode(', ', $fields) . ')');
+		// Reorg Table after ALTER TABLE
+    $this->connection->query($this->_reorgTableSql($table));
   }
 
   public function dropUniqueKey($table, $name) {
@@ -523,6 +633,8 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     }
 
     $this->connection->query('ALTER TABLE {' . $table . '} DROP CONSTRAINT ' . $this->prefixNonTable($table, $name, 'uix'));
+		// Reorg Table after ALTER TABLE
+    $this->connection->query($this->_reorgTableSql($table));
     return TRUE;
   }
 
@@ -562,7 +674,7 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     // Drop Trigger and rename Sequence.
     $serial_value = 0;
     try {
-      $serial_value = $this->connection->query('SELECT ' . $this->connection->makeSequenceName($table, $field) . ' CURRVAL FROM DUAL')->fetchField();
+      $serial_value = $this->connection->query('SELECT PREVVAL FOR ' . $this->connection->makeSequenceName($table, $field) . ' FROM SYSIBM.SYSDUMMY1')->fetchField();
       $this->connection->query('DROP TRIGGER ' . $this->prefixNonTable($table, $field, 'trg'));
       $this->connection->query('DROP SEQUENCE ' . $this->connection->makeSequenceName($table, $field));
     }
@@ -578,7 +690,9 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     $this->connection->query('UPDATE {' . $table . '} SET ' . $field_new . ' = ' . $field . '_old');
 
     if ($not_null) {
-      $this->connection->query('ALTER TABLE {' . $table . '} MODIFY (' . $field_new . ' NOT NULL)');
+      $this->connection->query('ALTER TABLE {' . $table . '} ALTER COLUMN ' . $field_new . ' SET NOT NULL');
+      // Reorg Table after ALTER TABLE
+      $this->connection->query($this->_reorgTableSql($table));
     }
 
     $this->dropField($table, $field . '_old');
@@ -604,16 +718,26 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     return 'CREATE SEQUENCE ' . $this->connection->makeSequenceName($table, $field) . ' MINVALUE 1 INCREMENT BY 1 START WITH ' . $start . ' NOCACHE NOORDER NOCYCLE';
   }
 
+  protected function _renameSeqTrg($table_old, $field_old, $table_new, $field_new) {
+    try {
+      $serial_value = $this->connection->query('SELECT PREVVAL FOR ' . $this->connection->makeSequenceName($old_table, $old_field) . ' FROM SYSIBM.SYSDUMMY1')->fetchField();
+      $this->dropTrigger($table, $field, 'trg');
+      $this->connection->query('DROP SEQUENCE ' . $this->connection->makeSequenceName($table, $field));
+      $this->connection->query($this->_createSequenceSql($table, $field_new, $serial_value));
+      $this->connection->query($this->_createTriggerSql($table, $field_new));
+      
+    }
+    catch (Exception $e) {
+      // No action required.
+    }
+    return TRUE;
+  }
+
   protected function _createTriggerSql($table, $field) {
-    $query = 'CREATE OR REPLACE TRIGGER ' . $this->prefixNonTable($table, $field, 'trg') . ' ';
-    $query .= 'BEFORE INSERT ON {' . $table . '} ';
-    $query .= 'FOR EACH ROW ';
-    $query .= 'WHEN (NEW.' . $field . ' IS NULL) ';
-    $query .= 'BEGIN ';
-    $query .= 'SELECT ' . $this->connection->makeSequenceName($table, $field) . '.NEXTVAL ';
-    $query .= 'INTO :NEW.' . $field . ' ';
-    $query .= 'FROM DUAL;';
-    $query .= 'END;';
+    $query = 'CREATE TRIGGER ' . $this->prefixNonTable($table, $field, 'trg') . ' NO CASCADE';
+    $query .= ' BEFORE INSERT ON {' . $table . '}  REFERENCING NEW AS n';
+    $query .= ' FOR EACH ROW ';
+    $query .= ' SET n.' . $field . ' = NEXTVAL FOR ' . $this->connection->makeSequenceName($table, $field) . '';
     return $query;
   }
 
@@ -640,13 +764,14 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     $table_name = $this->connection->prefixTables('{' . $table . '}');
     $table_name = $this->connection->escapeForDB2($table_name);
     $column_name = isset($column) ? $this->connection->escapeForDB2($column) : NULL;
+		$db_user = $this->connection->getConnectionOptions()['username'];
 
     // Don't use {} around user_col_comments, user_tab_comments tables.
     if (isset($column_name)) {
-      return $this->connection->query('SELECT COMMENTS FROM USER_COL_COMMENTS WHERE LOWER(TABLE_NAME) = :table_name AND LOWER(COLUMN_NAME) = :column_name', array(':table_name' => strtolower($table_name), ':column_name' => strtolower($column_name)))->fetchField();
+      return $this->connection->query('SELECT COL.REMARKS FROM SYSCAT.COLUMNS COL LEFT JOIN SYSCAT.TABLES TAB ON COL.TABNAME = TAB.TABNAME AND COL.TABSCHEMA = TAB.TABSCHEMA WHERE LCASE(COL.TABNAME) = :table_name AND LCASE(COL.COLNAME) = :column_name AND LCASE(TAB.OWNER) = :db_user ', array(':table_name' => strtolower($table_name), ':column_name' => strtolower($column_name), ':db_user' => strtolower($db_user)))->fetchField();
     }
     else {
-      return $this->connection->query('SELECT COMMENTS FROM USER_TAB_COMMENTS WHERE LOWER(TABLE_NAME) = :table_name', array(':table_name' => strtolower($table_name)))->fetchField();
+      return $this->connection->query('SELECT REMARKS FROM SYSCAT.TABLES WHERE LCASE(TABNAME) = :table_name AND LCASE(OWNER) = :db_user', array(':table_name' => strtolower($table_name), ':db_user' => strtolower($db_user)))->fetchField();
     }
   }
 }
