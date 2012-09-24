@@ -184,16 +184,16 @@ class InsertQuery_ibm extends InsertQuery {
 
       $i = 0;
       foreach ($this->insertFields as $field) {
-        if (isset($this->schema['fields'][$field]) && $this->schema['fields'][$field]['type'] == 'blob') {
+//        if (isset($this->schema['fields'][$field]) && $this->schema['fields'][$field]['type'] == 'blob') {
           // BLOB field insert in DB2 required additional handling with
           // EMPTY_BLOB() pleaseholder + RETURNING INTO (see below).
-          $placeholders[] = 'EMPTY_BLOB()';
-          $blob_fields[] = $this->connection->escapeForDB2($field);
-          $blob_placeholders[] = ':db_insert_placeholder_' . $i;
-        }
-        else {
+//          $placeholders[] = 'EMPTY_BLOB()';
+//          $blob_fields[] = $this->connection->escapeForDB2($field);
+//          $blob_placeholders[] = ':db_insert_placeholder_' . $i;
+//        }
+//        else {
           $placeholders[] = ':db_insert_placeholder_' . $i;
-        }
+//        }
         ++$i;
       }
       $query .= '(' . implode(', ', $placeholders) . ')';
@@ -205,10 +205,13 @@ class InsertQuery_ibm extends InsertQuery {
     }
 
     // DB2 BLOB additional handling with RETURNING INTO.
-    if (count($blob_fields)) {
-      $query .= ' RETURNING ' . implode(', ', $blob_fields) . ' INTO ' . implode (', ', $blob_placeholders);
-    }
+//    if (count($blob_fields)) {
+//      $query .= ' RETURNING ' . implode(', ', $blob_fields) . ' INTO ' . implode (', ', $blob_placeholders);
+//    }
 
+echo 'UPD SQL: <br />';
+print_r($query);
+echo '<br /><br />';
     return $query;
   }
 }
@@ -389,16 +392,16 @@ class UpdateQuery_ibm extends UpdateQuery {
     $blob_fields = array();
     $blob_placeholders = array();
     foreach ($fields as $field => $value) {
-      if (isset($this->schema['fields'][$field]) && $this->schema['fields'][$field]['type'] == 'blob') {
+//      if (isset($this->schema['fields'][$field]) && $this->schema['fields'][$field]['type'] == 'blob') {
         // BLOB field update in DB2 required additional handling with
         // EMPTY_BLOB() pleaseholder + RETURNING INTO (see below).
-        $update_fields[] = $this->connection->escapeForDB2($field) . ' = EMPTY_BLOB()';
-        $blob_fields[] = $this->connection->escapeForDB2($field);
-        $blob_placeholders[] = ':db_update_placeholder_' . $max_placeholder++;
-      }
-      else {
+//        $update_fields[] = $this->connection->escapeForDB2($field) . ' = EMPTY_BLOB()';
+//        $blob_fields[] = $this->connection->escapeForDB2($field);
+//        $blob_placeholders[] = ':db_update_placeholder_' . $max_placeholder++;
+//      }
+//      else {
         $update_fields[] = $this->connection->escapeForDB2($field) . ' = :db_update_placeholder_' . $max_placeholder++;
-      }
+//      }
     }
 
     $query = $comments . 'UPDATE ' . $table_name . ' SET ' . implode(', ', $update_fields);
@@ -410,10 +413,13 @@ class UpdateQuery_ibm extends UpdateQuery {
     }
 
     // DB2 BLOB additional handling with RETURNING INTO.
-    if (count($blob_fields)) {
-      $query .= ' RETURNING ' . implode(', ', $blob_fields) . ' INTO ' . implode (', ', $blob_placeholders);
-    }
+//    if (count($blob_fields)) {
+//      $query .= ' RETURNING ' . implode(', ', $blob_fields) . ' INTO ' . implode (', ', $blob_placeholders);
+//    }
 
+echo 'UPD SQL: <br />';
+print_r($query);
+echo '<br /><br />';
     return $query;
   }
 }

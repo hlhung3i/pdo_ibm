@@ -271,7 +271,7 @@ class DatabaseConnectionTestCase extends DatabaseTestCase {
   /**
    * Tests the connection options of the active database.
    */
-  function SKIP_testConnectionOptions() {
+  function testConnectionOptions() {
     $connection_info = Database::getConnectionInfo('default');
 
     // Be sure we're connected to the default database.
@@ -488,7 +488,7 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
   /**
    * Test that we can insert multiple records in one query object.
    */
-  function SKIP_testMultiInsert() {
+  function testMultiInsert() {
     $num_records_before = (int) db_query('SELECT COUNT(*) FROM {test}')->fetchField();
 
     $query = db_insert('test');
@@ -521,7 +521,7 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
   /**
    * Test that an insert object can be reused with new data after it executes.
    */
-  function SKIP_testRepeatedInsert() {
+  function testRepeatedInsert() {
     $num_records_before = db_query('SELECT COUNT(*) FROM {test}')->fetchField();
 
     $query = db_insert('test');
@@ -556,7 +556,7 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
   /**
    * Test that we can specify fields without values and specify values later.
    */
-  function SKIP_testInsertFieldOnlyDefinintion() {
+  function testInsertFieldOnlyDefinintion() {
     // This is useful for importers, when we want to create a query and define
     // its fields once, then loop over a multi-insert execution.
     db_insert('test')
@@ -576,7 +576,7 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
   /**
    * Test that inserts return the proper auto-increment ID.
    */
-  function SKIP_testInsertLastInsertID() {
+  function testInsertLastInsertID() {
     $id = db_insert('test')
       ->fields(array(
         'name' => 'Larry',
@@ -590,7 +590,7 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
   /**
    * Test that the INSERT INTO ... SELECT ... syntax works.
    */
-  function SKIP_testInsertSelect() {
+  function testInsertSelect() {
     $query = db_select('test_people', 'tp');
     // The query builder will always append expressions after fields.
     // Add the expression first to test that the insert fields are correctly
@@ -630,7 +630,7 @@ class DatabaseInsertLOBTestCase extends DatabaseTestCase {
   /**
    * Test that we can insert a single blob field successfully.
    */
-  function SKIP_testInsertOneBlob() {
+  function testInsertOneBlob() {
     $data = "This is\000a test.";
     $this->assertTrue(strlen($data) === 15, t('Test data contains a NULL.'));
     $id = db_insert('test_one_blob')
@@ -643,7 +643,7 @@ class DatabaseInsertLOBTestCase extends DatabaseTestCase {
   /**
    * Test that we can insert multiple blob fields in the same query.
    */
-  function SKIP_testInsertMultipleBlob() {
+  function testInsertMultipleBlob() {
     $id = db_insert('test_two_blobs')
       ->fields(array(
         'blob1' => 'This is',
@@ -671,7 +671,7 @@ class DatabaseInsertDefaultsTestCase extends DatabaseTestCase {
   /**
    * Test that we can run a query that is "default values for everything".
    */
-  function SKIP_testDefaultInsert() {
+  function testDefaultInsert() {
     $query = db_insert('test')->useDefaults(array('job'));
     $id = $query->execute();
 
@@ -684,7 +684,7 @@ class DatabaseInsertDefaultsTestCase extends DatabaseTestCase {
   /**
    * Test that no action will be preformed if no fields are specified.
    */
-  function SKIP_testDefaultEmptyInsert() {
+  function testDefaultEmptyInsert() {
     $num_records_before = (int) db_query('SELECT COUNT(*) FROM {test}')->fetchField();
 
     try {
@@ -702,7 +702,7 @@ class DatabaseInsertDefaultsTestCase extends DatabaseTestCase {
   /**
    * Test that we can insert fields with values and defaults in the same query.
    */
-  function SKIP_testDefaultInsertWithFields() {
+  function testDefaultInsertWithFields() {
     $query = db_insert('test')
       ->fields(array('name' => 'Bob'))
       ->useDefaults(array('job'));
@@ -762,7 +762,7 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can update a multiple records successfully.
    */
-  function SKIP_testMultiUpdate() {
+  function testMultiUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition('job', 'Singer')
@@ -776,7 +776,7 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can update a multiple records with a non-equality condition.
    */
-  function SKIP_testMultiGTUpdate() {
+  function testMultiGTUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition('age', 26, '>')
@@ -790,7 +790,7 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can update a multiple records with a where call.
    */
-  function SKIP_testWhereUpdate() {
+  function testWhereUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->where('age > :age', array(':age' => 26))
@@ -804,7 +804,7 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can stack condition and where calls.
    */
-  function SKIP_testWhereAndConditionUpdate() {
+  function testWhereAndConditionUpdate() {
     $update = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->where('age > :age', array(':age' => 26))
@@ -819,7 +819,7 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
   /**
    * Test updating with expressions.
    */
-  function SKIP_testExpressionUpdate() {
+  function testExpressionUpdate() {
     // Set age = 1 for a single row for this test to work.
     db_update('test')
       ->condition('id', 1)
@@ -853,7 +853,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test updates with OR conditionals.
    */
-  function SKIP_testOrConditionUpdate() {
+  function testOrConditionUpdate() {
     $update = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition(db_or()
@@ -870,7 +870,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test WHERE IN clauses.
    */
-  function SKIP_testInConditionUpdate() {
+  function testInConditionUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition('name', array('John', 'Paul'), 'IN')
@@ -884,7 +884,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test WHERE NOT IN clauses.
    */
-  function SKIP_testNotInConditionUpdate() {
+  function testNotInConditionUpdate() {
     // The o is lowercase in the 'NoT IN' operator, to make sure the operators
     // work in mixed case.
     $num_updated = db_update('test')
@@ -900,7 +900,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test BETWEEN conditional clauses.
    */
-  function SKIP_testBetweenConditionUpdate() {
+  function testBetweenConditionUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition('age', array(25, 26), 'BETWEEN')
@@ -914,7 +914,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test LIKE conditionals.
    */
-  function SKIP_testLikeConditionUpdate() {
+  function testLikeConditionUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition('name', '%ge%', 'LIKE')
@@ -928,7 +928,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test update with expression values.
    */
-  function SKIP_testUpdateExpression() {
+  function testUpdateExpression() {
     $before_age = db_query('SELECT age FROM {test} WHERE name = :name', array(':name' => 'Ringo'))->fetchField();
     $GLOBALS['larry_test'] = 1;
     $num_updated = db_update('test')
@@ -951,7 +951,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test update with only expression values.
    */
-  function SKIP_testUpdateOnlyExpression() {
+  function testUpdateOnlyExpression() {
     $before_age = db_query('SELECT age FROM {test} WHERE name = :name', array(':name' => 'Ringo'))->fetchField();
     $num_updated = db_update('test')
       ->condition('name', 'Ringo')
@@ -980,7 +980,7 @@ class DatabaseUpdateLOBTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can update a blob column.
    */
-  function SKIP_testUpdateOneBlob() {
+  function testUpdateOneBlob() {
     $data = "This is\000a test.";
     $this->assertTrue(strlen($data) === 15, t('Test data contains a NULL.'));
     $id = db_insert('test_one_blob')
@@ -1000,7 +1000,7 @@ class DatabaseUpdateLOBTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can update two blob columns in the same table.
    */
-  function SKIP_testUpdateMultipleBlob() {
+  function testUpdateMultipleBlob() {
     $id = db_insert('test_two_blobs')
       ->fields(array(
         'blob1' => 'This is',
@@ -3421,7 +3421,7 @@ class DatabaseTransactionTestCase extends DatabaseTestCase {
    *
    * If the active connection does not support transactions, this test does nothing.
    */
-  function testTransactionRollBackSupported() {
+  function SKIP_testTransactionRollBackSupported() {
     // This test won't work right if transactions are not supported.
     if (!Database::getConnection()->supportsTransactions()) {
       return;
