@@ -49,7 +49,6 @@ class InsertQuery_ibm extends InsertQuery {
     // databases, such as DB2, this is also a notable performance boost.
     $transaction = $this->connection->startTransaction();
 
-//    $stmt = $this->connection->prepareQuery((string) $this)->getStatement(NULL);
     $stmt = $this->connection->prepareQuery((string) $this);
 
     try {
@@ -184,16 +183,8 @@ class InsertQuery_ibm extends InsertQuery {
 
       $i = 0;
       foreach ($this->insertFields as $field) {
-//        if (isset($this->schema['fields'][$field]) && $this->schema['fields'][$field]['type'] == 'blob') {
-          // BLOB field insert in DB2 required additional handling with
-          // EMPTY_BLOB() pleaseholder + RETURNING INTO (see below).
-//          $placeholders[] = 'EMPTY_BLOB()';
-//          $blob_fields[] = $this->connection->escapeForDB2($field);
-//          $blob_placeholders[] = ':db_insert_placeholder_' . $i;
-//        }
-//        else {
-          $placeholders[] = ':db_insert_placeholder_' . $i;
-//        }
+        // BLOB field insert in DB2 no need special handling
+				$placeholders[] = ':db_insert_placeholder_' . $i;
         ++$i;
       }
       $query .= '(' . implode(', ', $placeholders) . ')';
@@ -204,14 +195,6 @@ class InsertQuery_ibm extends InsertQuery {
       $query .= '(' . implode(', ', $placeholders) . ')';
     }
 
-    // DB2 BLOB additional handling with RETURNING INTO.
-//    if (count($blob_fields)) {
-//      $query .= ' RETURNING ' . implode(', ', $blob_fields) . ' INTO ' . implode (', ', $blob_placeholders);
-//    }
-
-echo 'UPD SQL: <br />';
-print_r($query);
-echo '<br /><br />';
     return $query;
   }
 }
@@ -250,6 +233,8 @@ class UpdateQuery_ibm extends UpdateQuery {
   }
 
   public function execute() {
+var_dump(debug_backtrace());
+
     $max_placeholder = 0;
     $blobs = array();
     $blob_count = 0;
@@ -301,7 +286,6 @@ class UpdateQuery_ibm extends UpdateQuery {
 
     // Because we filter $fields the same way here and in __toString(), the
     // placeholders will all match up properly.
- //   $stmt = $this->connection->prepareQuery((string) $this)->getStatement(NULL);
     $stmt = $this->connection->prepareQuery((string) $this);
 
     // Expressions take priority over literal fields, so we process those first
@@ -392,16 +376,7 @@ class UpdateQuery_ibm extends UpdateQuery {
     $blob_fields = array();
     $blob_placeholders = array();
     foreach ($fields as $field => $value) {
-//      if (isset($this->schema['fields'][$field]) && $this->schema['fields'][$field]['type'] == 'blob') {
-        // BLOB field update in DB2 required additional handling with
-        // EMPTY_BLOB() pleaseholder + RETURNING INTO (see below).
-//        $update_fields[] = $this->connection->escapeForDB2($field) . ' = EMPTY_BLOB()';
-//        $blob_fields[] = $this->connection->escapeForDB2($field);
-//        $blob_placeholders[] = ':db_update_placeholder_' . $max_placeholder++;
-//      }
-//      else {
-        $update_fields[] = $this->connection->escapeForDB2($field) . ' = :db_update_placeholder_' . $max_placeholder++;
-//      }
+      $update_fields[] = $this->connection->escapeForDB2($field) . ' = :db_update_placeholder_' . $max_placeholder++;
     }
 
     $query = $comments . 'UPDATE ' . $table_name . ' SET ' . implode(', ', $update_fields);
@@ -412,14 +387,6 @@ class UpdateQuery_ibm extends UpdateQuery {
       $query .= " WHERE " . $this->condition;
     }
 
-    // DB2 BLOB additional handling with RETURNING INTO.
-//    if (count($blob_fields)) {
-//      $query .= ' RETURNING ' . implode(', ', $blob_fields) . ' INTO ' . implode (', ', $blob_placeholders);
-//    }
-
-echo 'UPD SQL: <br />';
-print_r($query);
-echo '<br /><br />';
     return $query;
   }
 }

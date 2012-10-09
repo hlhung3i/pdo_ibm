@@ -109,19 +109,34 @@ class SchemaTestCase extends DrupalWebTestCase {
 // [InsertQuery] 
 // [InsertQuery] print_r(serialize($paul));
 
-global $databases;
+// [GLOBAL] global $databases;
+// [GLOBAL] 
+// [GLOBAL] print_r($databases);
+// [GLOBAL] 
+// [GLOBAL] print_r($GLOBALS['databases']);
+// [GLOBAL] 
+// [GLOBAL] echo '<br />';
+// [GLOBAL] echo '<br />';
+// [GLOBAL] echo '<br />';
+// [GLOBAL] print_r(Database::getConnection()->getConnectionOptions()['username']);
+// [GLOBAL] 
+// [GLOBAL] print_r($GLOBALS);
 
-print_r($databases);
+    echo 'test version<br />';
+    $sql = 'SELECT service_level FROM TABLE(SYSPROC.ENV_GET_INST_INFO())';
+//    $sql = 'SELECT service_level FROM test.v1';
+    $results = db_query($sql);
+    foreach ($results as $result) {
+      $field = $result->service_level;
+      print_r($field);
+    }
 
-print_r($GLOBALS['databases']);
 
-echo '<br />';
-echo '<br />';
-echo '<br />';
-print_r(Database::getConnection()->getConnectionOptions()['username']);
+    echo '<br />test end <br />';
 
-print_r($GLOBALS);
-	}
+//db_query('CREATE OR REPLACE VIEW env_get_inst_info AS SELECT * FROM TABLE(SYSPROC.ENV_GET_INST_INFO())');
+
+  }
 
   /**
    *

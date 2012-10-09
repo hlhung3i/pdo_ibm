@@ -88,7 +88,6 @@ class DatabaseSchema_ibm extends DatabaseSchema {
    *     - 'blob_fields' that lists all the blob fields in the table.
    */
   public function queryTableInformation($table, $rebuild = FALSE) {
-
     // Generate a key to reference this table's information on.
     $table_name = $this->connection->prefixTables('{' . $table . '}');
     $table_name = $this->connection->escapeForDB2($table_name);
@@ -98,7 +97,6 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       $this->tableInformation[$table]['fields'] = array();
 
       // Don't use {} around user_tab_cols table.
-      // TODO: !! Need Rewrite to get Primary Key column for THIS user
       $results = $this->connection->query("SELECT COLNAME FROM SYSCAT.COLUMNS COL LEFT JOIN SYSCAT.TABLES TAB ON COL.TABNAME = TAB.TABNAME AND COL.TABSCHEMA = TAB.TABSCHEMA WHERE COL.TYPENAME = 'BLOB' AND LCASE(COL.TABNAME) = :table_name AND LCASE(TAB.OWNER) = :db_user", array(':table_name' => strtolower($table_name), ':db_user' => strtolower($db_user)));
       foreach ($results as $result) {
         $field = strtolower($this->connection->restoreForDB2($result->colname));
@@ -106,8 +104,6 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       }
 
       // Don't use {} around user_constraints and user_cons_columns table.
-//      $results = $this->connection->query("SELECT COLS.TABLE_NAME, COLS.COLUMN_NAME FROM USER_CONSTRAINTS CONS, USER_CONS_COLUMNS COLS, USER_TAB_COLS TCOLS WHERE CONS.CONSTRAINT_TYPE = 'P' AND CONS.CONSTRAINT_NAME = COLS.CONSTRAINT_NAME AND CONS.OWNER = COLS.OWNER AND COLS.TABLE_NAME = TCOLS.TABLE_NAME AND COLS.COLUMN_NAME = TCOLS.COLUMN_NAME AND TCOLS.DATA_TYPE = 'NUMBER' AND LCASE(COLS.TABLE_NAME) = :table_name", array(':table_name' => strtolower($table_name)));
-      // TODO: !! Need Rewrite to get Primary Key column for THIS user
       $results = $this->connection->query("SELECT COLNAME FROM SYSCAT.COLUMNS COL LEFT JOIN SYSCAT.TABLES TAB ON COL.TABNAME = TAB.TABNAME AND COL.TABSCHEMA = TAB.TABSCHEMA WHERE LCASE(COL.TABNAME) = :table_name AND COL.KEYSEQ > 0 AND LCASE(TAB.OWNER) = :db_user ORDER BY KEYSEQ ASC", array(':table_name' => strtolower($table_name), ':db_user' => strtolower($db_user)));
       foreach ($results as $result) {
         $field = strtolower($this->connection->restoreForDB2($result->colname));
@@ -115,7 +111,6 @@ class DatabaseSchema_ibm extends DatabaseSchema {
         $sequence_name = $this->connection->escapeForDB2($sequence_name);
 
         // Don't use {} around SYSCAT.SEQUENCES table.
-      // TODO: !! Need Rewrite to filter record for THIS user
         if ($this->connection->query('SELECT 1 FROM SYSCAT.SEQUENCES WHERE LCASE(SEQNAME) = :sequence_name AND LCASE(OWNER) = :sequence_owner', array(':sequence_name' => strtolower($sequence_name), ':sequence_owner' => strtolower($db_user)))->fetchField()) {
           $this->tableInformation[$table]['fields'][$field]['type'] = 'serial';
         }
@@ -277,14 +272,15 @@ class DatabaseSchema_ibm extends DatabaseSchema {
 //    }
 
     // With poor DB2 we have a lots of limitation.
+		// 2012-10-08 Length x4 for UTF8 character set
     if (isset($spec['precision']) && isset($spec['scale'])) {
       $sql .= '(' . min($spec['precision'], DB2_MAX_NUMBER_LENGTH) . ', ' . $spec['scale'] . ')';
     }
     elseif ($spec['ibm_type'] == 'VARCHAR') {
-      $sql .= '(' . (isset($spec['length']) ? min($spec['length'], DB2_MAX_NVARCHAR2_LENGTH) : DB2_MAX_NVARCHAR2_LENGTH) . ')';
+      $sql .= '(' . (isset($spec['length']) ? min($spec['length']*4, DB2_MAX_NVARCHAR2_LENGTH) : DB2_MAX_NVARCHAR2_LENGTH) . ')';
     }
     elseif ($spec['ibm_type'] == 'CHAR') {
-      $sql .= '(' . (isset($spec['length']) ? min($spec['length'], DB2_MAX_NCHAR_LENGTH) : DB2_MAX_NCHAR_LENGTH) . ')';
+      $sql .= '(' . (isset($spec['length']) ? min($spec['length']*4, DB2_MAX_NCHAR_LENGTH) : DB2_MAX_NCHAR_LENGTH) . ')';
     }
     elseif ($spec['ibm_type'] == 'DECIMAL') {
       $sql .= '(' . (isset($spec['length']) ? min($spec['length'], DB2_MAX_NUMBER_LENGTH) : DB2_MAX_NUMBER_LENGTH) . ')';
@@ -313,7 +309,6 @@ class DatabaseSchema_ibm extends DatabaseSchema {
       $sql .= ' CHECK (' . $name . ' >= 0)';
     }
 
-print 'SQL : ' . $sql . '<br />';
     return $sql;
   }
 
@@ -324,7 +319,6 @@ print 'SQL : ' . $sql . '<br />';
    *   A field description array, as specified in the schema documentation.
    */
   protected function processField($field) {
-
     if (!isset($field['size'])) {
       $field['size'] = 'normal';
     }
@@ -392,8 +386,8 @@ print 'SQL : ' . $sql . '<br />';
   }
 
   protected function _reorgTableSql($table) {
+		//  DB2 needs reorganize table after some object modification, e.g tables
 		$sql = "CALL SYSPROC.ADMIN_CMD('REORG TABLE {" . $table . "}')";
-//		echo 'REORG after Adding Primary Key<br /> SQL = ' . $sql . '<br />'; // JUNK
 		return $sql;
 	}
 

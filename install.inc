@@ -42,78 +42,61 @@ class DatabaseTasks_ibm extends DatabaseTasks {
    */
   public function initializeDatabase() {
     try {
+//      db_query('CREATE OR REPLACE
+//        FUNCTION substring
+//          (
+//            p_s NVARCHAR2,
+//            p_start NUMBER,
+//            p_length NUMBER DEFAULT NULL)
+//          RETURN NVARCHAR2
+//        AS
+//        BEGIN
+//          IF p_length IS NULL THEN
+//            RETURN SUBSTR(p_s, p_start);
+//          ELSE
+//            RETURN SUBSTR(p_s, p_start, p_length);
+//          END IF;
+//        END;');
       db_query('CREATE OR REPLACE
-        FUNCTION greatest
-          (
-            p1 NUMBER,
-            p2 NUMBER,
-            p3 NUMBER DEFAULT NULL)
-          RETURN NUMBER
-        AS
-        BEGIN
-          IF p3 IS NULL THEN
-            IF p1 > p2 OR p2 IS NULL THEN
-              RETURN p1;
-            ELSE
-              RETURN p2;
+        FUNCTION substring_index(IN VARCHAR(2000),DELIMIT VARCHAR(200), N INT)
+          RETURNS VARCHAR(2000)
+          DETERMINISTIC NO EXTERNAL ACTION CONTAINS SQL 
+          BEGIN ATOMIC 
+            DECLARE OUT VARCHAR(2000);
+            DECLARE DEM VARCHAR(2000);
+            DECLARE NUM INT;
+            DECLARE POS INT;
+            DECLARE TEMP VARCHAR(2000);
+            SET DEM=DELIMIT;
+            SET TEMP=IN;
+            SET NUM=N;
+            SET POS=1;
+            IF(NUM<0) THEN
+              WHILE(LOCATE(DELIMIT,TEMP)!=0) DO
+                SET TEMP=SUBSTR(TEMP,LOCATE(DELIMIT,TEMP)+1);
+                SET NUM=NUM+1;
+              END WHILE;
+              SET NUM=NUM+1;
+              SET TEMP=IN; 
             END IF;
-          ELSE
-            RETURN greatest(p1, greatest(p2, p3));
+            WHILE (NUM>0) DO
+              SET POS=POS+LOCATE(DELIMIT,TEMP)-1;
+              SET TEMP=SUBSTR(TEMP,LOCATE(DELIMIT,TEMP)+1);
+              SET NUM=NUM-1;
+            END WHILE; 
+            IF(N>0) THEN 
+              RETURN SUBSTR(IN,1,POS); 
+            ELSE
+              RETURN SUBSTR(IN,POS+1);
           END IF;
-        END;');
-      db_query('CREATE OR REPLACE
-        FUNCTION substring
-          (
-            p_s NVARCHAR2,
-            p_start NUMBER,
-            p_length NUMBER DEFAULT NULL)
-          RETURN NVARCHAR2
-        AS
-        BEGIN
-          IF p_length IS NULL THEN
-            RETURN SUBSTR(p_s, p_start);
-          ELSE
-            RETURN SUBSTR(p_s, p_start, p_length);
-          END IF;
-        END;');
-      db_query('CREATE OR REPLACE
-        FUNCTION substring_index
-          (
-            p_buff NVARCHAR2,
-            p_delimiter NVARCHAR2,
-            p_count NUMBER)
-          RETURN NVARCHAR2
-        AS
-          v_end NUMBER:= 1;
-        BEGIN
-          IF p_count > 0 THEN
-            FOR i IN 1..p_count
-            LOOP
-              v_end := instr(p_buff, p_delimiter, v_end + 1);
-              IF v_end = 0 THEN
-                v_end:= LENGTH(p_buff);
-              END IF;
-            END LOOP;
-            RETURN SUBSTR(p_buff, 1, v_end - 1);
-          ELSE
-            v_end := LENGTH(p_buff);
-            FOR i IN 1..(p_count* - 1)
-            LOOP
-              v_end := instr(p_buff, p_delimiter, (LENGTH(p_buff) - (v_end - 2))* - 1);
-              IF v_end = 0 THEN
-                v_end:= LENGTH(p_buff);
-              END IF;
-            END LOOP;
-            RETURN SUBSTR(p_buff, v_end + 1);
-          END IF;
-        END;');
-      db_query('CREATE OR REPLACE
-        FUNCTION rand
-          RETURN NUMBER
-        AS
-        BEGIN
-          RETURN ABS(MOD(DBMS_RANDOM.RANDOM,10000001)/10000000);
-        END;');
+        END');
+//      db_query('CREATE OR REPLACE
+//        FUNCTION rand
+//          RETURN NUMBER
+//        AS
+//        BEGIN
+//          RETURN ABS(MOD(DBMS_RANDOM.RANDOM,10000001)/10000000);
+//        END;');
     }
     catch (Exception $e) {
       $this->fail(st('Drupal could not be correctly setup with the existing database. Revise any errors.'));

@@ -110,7 +110,6 @@ class DatabaseTestCase extends DrupalWebTestCase {
       ))
       ->execute();
 
-
     $george = db_insert('test')
       ->fields(array(
         'name' => 'George',
@@ -135,11 +134,6 @@ class DatabaseTestCase extends DrupalWebTestCase {
       ))
       ->execute();
 
-//$john = 4; // JUNK
-//$george = 5; // JUNK
-//$ringo = 6; // JUNK
-//$paul = 7; // JUNK
-
     db_insert('test_people')
       ->fields(array(
         'name' => 'Meredith',
@@ -147,6 +141,7 @@ class DatabaseTestCase extends DrupalWebTestCase {
         'job' => 'Speaker',
       ))
       ->execute();
+
     db_insert('test_task')
       ->fields(array('pid', 'task', 'priority'))
       ->values(array(
@@ -256,7 +251,7 @@ class DatabaseConnectionTestCase extends DatabaseTestCase {
   /**
    * Tests the closing of a database connection.
    */
-  function testConnectionClosing() {
+  function SKIP_testConnectionClosing() {
     // Open the default target so we have an object to compare.
     $db1 = Database::getConnection('default', 'default');
 
@@ -271,7 +266,7 @@ class DatabaseConnectionTestCase extends DatabaseTestCase {
   /**
    * Tests the connection options of the active database.
    */
-  function testConnectionOptions() {
+  function SKIP_testConnectionOptions() {
     $connection_info = Database::getConnectionInfo('default');
 
     // Be sure we're connected to the default database.
@@ -322,7 +317,7 @@ class DatabaseFetchTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can fetch a record properly in default object mode.
    */
-  function testQueryFetchDefault() {
+  function SKIP_testQueryFetchDefault() {
     $records = array();
     $result = db_query('SELECT name FROM {test} WHERE age = :age', array(':age' => 25));
     $this->assertTrue($result instanceof DatabaseStatementInterface, t('Result set is a Drupal statement object.'));
@@ -338,7 +333,7 @@ class DatabaseFetchTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can fetch a record to an object explicitly.
    */
-  function testQueryFetchObject() {
+  function SKIP_testQueryFetchObject() {
     $records = array();
     $result = db_query('SELECT name FROM {test} WHERE age = :age', array(':age' => 25), array('fetch' => PDO::FETCH_OBJ));
     foreach ($result as $record) {
@@ -353,7 +348,7 @@ class DatabaseFetchTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can fetch a record to an array associative explicitly.
    */
-  function testQueryFetchArray() {
+  function SKIP_testQueryFetchArray() {
     $records = array();
     $result = db_query('SELECT name FROM {test} WHERE age = :age', array(':age' => 25), array('fetch' => PDO::FETCH_ASSOC));
     foreach ($result as $record) {
@@ -371,7 +366,7 @@ class DatabaseFetchTestCase extends DatabaseTestCase {
    *
    * @see FakeRecord
    */
-  function testQueryFetchClass() {
+  function SKIP_testQueryFetchClass() {
     $records = array();
     $result = db_query('SELECT name FROM {test} WHERE age = :age', array(':age' => 25), array('fetch' => 'FakeRecord'));
     foreach ($result as $record) {
@@ -405,7 +400,7 @@ class DatabaseFetch2TestCase extends DatabaseTestCase {
   }
 
   // Confirm that we can fetch a record into an indexed array explicitly.
-  function testQueryFetchNum() {
+  function SKIP_testQueryFetchNum() {
     $records = array();
     $result = db_query('SELECT name FROM {test} WHERE age = :age', array(':age' => 25), array('fetch' => PDO::FETCH_NUM));
     foreach ($result as $record) {
@@ -421,7 +416,7 @@ class DatabaseFetch2TestCase extends DatabaseTestCase {
   /**
    * Confirm that we can fetch a record into a doubly-keyed array explicitly.
    */
-  function testQueryFetchBoth() {
+  function SKIP_testQueryFetchBoth() {
     $records = array();
     $result = db_query('SELECT name FROM {test} WHERE age = :age', array(':age' => 25), array('fetch' => PDO::FETCH_BOTH));
     foreach ($result as $record) {
@@ -438,7 +433,7 @@ class DatabaseFetch2TestCase extends DatabaseTestCase {
   /**
    * Confirm that we can fetch an entire column of a result set at once.
    */
-  function testQueryFetchCol() {
+  function SKIP_testQueryFetchCol() {
     $records = array();
     $result = db_query('SELECT name FROM {test} WHERE age > :age', array(':age' => 25));
     $column = $result->fetchCol();
@@ -468,7 +463,7 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
   /**
    * Test the very basic insert functionality.
    */
-  function testSimpleInsert() {
+  function SKIP_testSimpleInsert() {
     $num_records_before = db_query('SELECT COUNT(*) FROM {test}')->fetchField();
 
     $query = db_insert('test');
@@ -482,13 +477,12 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
     $this->assertIdentical($num_records_before + 1, (int) $num_records_after, t('Record inserts correctly.'));
     $saved_age = db_query('SELECT age FROM {test} WHERE name = :name', array(':name' => 'Yoko'))->fetchField();
     $this->assertIdentical($saved_age, '29', t('Can retrieve after inserting.'));
-
   }
 
   /**
    * Test that we can insert multiple records in one query object.
    */
-  function testMultiInsert() {
+  function SKIP_testMultiInsert() {
     $num_records_before = (int) db_query('SELECT COUNT(*) FROM {test}')->fetchField();
 
     $query = db_insert('test');
@@ -521,7 +515,7 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
   /**
    * Test that an insert object can be reused with new data after it executes.
    */
-  function testRepeatedInsert() {
+  function SKIP_testRepeatedInsert() {
     $num_records_before = db_query('SELECT COUNT(*) FROM {test}')->fetchField();
 
     $query = db_insert('test');
@@ -556,7 +550,7 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
   /**
    * Test that we can specify fields without values and specify values later.
    */
-  function testInsertFieldOnlyDefinintion() {
+  function SKIP_testInsertFieldOnlyDefinintion() {
     // This is useful for importers, when we want to create a query and define
     // its fields once, then loop over a multi-insert execution.
     db_insert('test')
@@ -576,7 +570,7 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
   /**
    * Test that inserts return the proper auto-increment ID.
    */
-  function testInsertLastInsertID() {
+  function SKIP_testInsertLastInsertID() {
     $id = db_insert('test')
       ->fields(array(
         'name' => 'Larry',
@@ -590,7 +584,7 @@ class DatabaseInsertTestCase extends DatabaseTestCase {
   /**
    * Test that the INSERT INTO ... SELECT ... syntax works.
    */
-  function testInsertSelect() {
+  function SKIP_testInsertSelect() {
     $query = db_select('test_people', 'tp');
     // The query builder will always append expressions after fields.
     // Add the expression first to test that the insert fields are correctly
@@ -630,7 +624,7 @@ class DatabaseInsertLOBTestCase extends DatabaseTestCase {
   /**
    * Test that we can insert a single blob field successfully.
    */
-  function testInsertOneBlob() {
+  function SKIP_testInsertOneBlob() {
     $data = "This is\000a test.";
     $this->assertTrue(strlen($data) === 15, t('Test data contains a NULL.'));
     $id = db_insert('test_one_blob')
@@ -643,7 +637,7 @@ class DatabaseInsertLOBTestCase extends DatabaseTestCase {
   /**
    * Test that we can insert multiple blob fields in the same query.
    */
-  function testInsertMultipleBlob() {
+  function SKIP_testInsertMultipleBlob() {
     $id = db_insert('test_two_blobs')
       ->fields(array(
         'blob1' => 'This is',
@@ -671,7 +665,7 @@ class DatabaseInsertDefaultsTestCase extends DatabaseTestCase {
   /**
    * Test that we can run a query that is "default values for everything".
    */
-  function testDefaultInsert() {
+  function SKIP_testDefaultInsert() {
     $query = db_insert('test')->useDefaults(array('job'));
     $id = $query->execute();
 
@@ -684,7 +678,7 @@ class DatabaseInsertDefaultsTestCase extends DatabaseTestCase {
   /**
    * Test that no action will be preformed if no fields are specified.
    */
-  function testDefaultEmptyInsert() {
+  function SKIP_testDefaultEmptyInsert() {
     $num_records_before = (int) db_query('SELECT COUNT(*) FROM {test}')->fetchField();
 
     try {
@@ -702,7 +696,7 @@ class DatabaseInsertDefaultsTestCase extends DatabaseTestCase {
   /**
    * Test that we can insert fields with values and defaults in the same query.
    */
-  function testDefaultInsertWithFields() {
+  function SKIP_testDefaultInsertWithFields() {
     $query = db_insert('test')
       ->fields(array('name' => 'Bob'))
       ->useDefaults(array('job'));
@@ -731,7 +725,7 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can update a single record successfully.
    */
-  function testSimpleUpdate() {
+  function SKIP_testSimpleUpdate() {
     $num_updated = db_update('test')
       ->fields(array('name' => 'Tiffany'))
       ->condition('id', 1)
@@ -740,13 +734,12 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
 
     $saved_name = db_query('SELECT name FROM {test} WHERE id = :id', array(':id' => 1))->fetchField();
     $this->assertIdentical($saved_name, 'Tiffany', t('Updated name successfully.'));
-
   }
 
   /**
    * Confirm updating to NULL.
    */
-  function testSimpleNullUpdate() {
+  function SKIP_testSimpleNullUpdate() {
     $this->ensureSampleDataNull();
     $num_updated = db_update('test_null')
       ->fields(array('age' => NULL))
@@ -756,13 +749,12 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
 
     $saved_age = db_query('SELECT age FROM {test_null} WHERE name = :name', array(':name' => 'Kermit'))->fetchField();
     $this->assertNull($saved_age, t('Updated name successfully.'));
-
   }
 
   /**
    * Confirm that we can update a multiple records successfully.
    */
-  function testMultiUpdate() {
+  function SKIP_testMultiUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition('job', 'Singer')
@@ -776,7 +768,7 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can update a multiple records with a non-equality condition.
    */
-  function testMultiGTUpdate() {
+  function SKIP_testMultiGTUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition('age', 26, '>')
@@ -790,7 +782,7 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can update a multiple records with a where call.
    */
-  function testWhereUpdate() {
+  function SKIP_testWhereUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->where('age > :age', array(':age' => 26))
@@ -804,7 +796,7 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can stack condition and where calls.
    */
-  function testWhereAndConditionUpdate() {
+  function SKIP_testWhereAndConditionUpdate() {
     $update = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->where('age > :age', array(':age' => 26))
@@ -819,7 +811,7 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
   /**
    * Test updating with expressions.
    */
-  function testExpressionUpdate() {
+  function SKIP_testExpressionUpdate() {
     // Set age = 1 for a single row for this test to work.
     db_update('test')
       ->condition('id', 1)
@@ -833,6 +825,9 @@ class DatabaseUpdateTestCase extends DatabaseTestCase {
     $num_rows = db_update('test')
       ->expression('age', 'age * age')
       ->execute();
+echo 'testExpressionUpdate<br />';
+print_r($num_rows);
+echo '<br />';
     $this->assertIdentical($num_rows, 3, t('Number of affected rows are returned.'));
   }
 }
@@ -853,7 +848,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test updates with OR conditionals.
    */
-  function testOrConditionUpdate() {
+  function SKIP_testOrConditionUpdate() {
     $update = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition(db_or()
@@ -870,7 +865,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test WHERE IN clauses.
    */
-  function testInConditionUpdate() {
+  function SKIP_testInConditionUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition('name', array('John', 'Paul'), 'IN')
@@ -884,7 +879,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test WHERE NOT IN clauses.
    */
-  function testNotInConditionUpdate() {
+  function SKIP_testNotInConditionUpdate() {
     // The o is lowercase in the 'NoT IN' operator, to make sure the operators
     // work in mixed case.
     $num_updated = db_update('test')
@@ -900,7 +895,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test BETWEEN conditional clauses.
    */
-  function testBetweenConditionUpdate() {
+  function SKIP_testBetweenConditionUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition('age', array(25, 26), 'BETWEEN')
@@ -914,7 +909,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test LIKE conditionals.
    */
-  function testLikeConditionUpdate() {
+  function SKIP_testLikeConditionUpdate() {
     $num_updated = db_update('test')
       ->fields(array('job' => 'Musician'))
       ->condition('name', '%ge%', 'LIKE')
@@ -931,11 +926,19 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   function testUpdateExpression() {
     $before_age = db_query('SELECT age FROM {test} WHERE name = :name', array(':name' => 'Ringo'))->fetchField();
     $GLOBALS['larry_test'] = 1;
-    $num_updated = db_update('test')
-      ->condition('name', 'Ringo')
-      ->fields(array('job' => 'Musician'))
-      ->expression('age', 'age + :age', array(':age' => 4))
-      ->execute();
+// NOTE:
+//    $num_updated = db_update('test')
+//      ->condition('name', 'Ringo')
+//      ->fields(array('job' => 'Musician'))
+//      ->expression('age', 'age + :age', array(':age' => 4))
+//      ->execute();
+$tt = db_update('test')
+	->condition('name', 'Ringo')
+	->fields(array('job' => 'Musician'))
+	->expression('age', 'age + :age', array(':age' => 4))
+	;
+print_r($tt);
+$num_updated = $tt->execute();
     $this->assertIdentical($num_updated, 1, t('Updated 1 record.'));
 
     $num_matches = db_query('SELECT COUNT(*) FROM {test} WHERE job = :job', array(':job' => 'Musician'))->fetchField();
@@ -951,7 +954,7 @@ class DatabaseUpdateComplexTestCase extends DatabaseTestCase {
   /**
    * Test update with only expression values.
    */
-  function testUpdateOnlyExpression() {
+  function SKIP_testUpdateOnlyExpression() {
     $before_age = db_query('SELECT age FROM {test} WHERE name = :name', array(':name' => 'Ringo'))->fetchField();
     $num_updated = db_update('test')
       ->condition('name', 'Ringo')
@@ -980,7 +983,7 @@ class DatabaseUpdateLOBTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can update a blob column.
    */
-  function testUpdateOneBlob() {
+  function SKIP_testUpdateOneBlob() {
     $data = "This is\000a test.";
     $this->assertTrue(strlen($data) === 15, t('Test data contains a NULL.'));
     $id = db_insert('test_one_blob')
@@ -1000,7 +1003,7 @@ class DatabaseUpdateLOBTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can update two blob columns in the same table.
    */
-  function testUpdateMultipleBlob() {
+  function SKIP_testUpdateMultipleBlob() {
     $id = db_insert('test_two_blobs')
       ->fields(array(
         'blob1' => 'This is',
@@ -1063,7 +1066,7 @@ class DatabaseDeleteTruncateTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can delete a single record successfully.
    */
-  function testSimpleDelete() {
+  function SKIP_testSimpleDelete() {
     $num_records_before = db_query('SELECT COUNT(*) FROM {test}')->fetchField();
 
     $num_deleted = db_delete('test')
@@ -1078,7 +1081,7 @@ class DatabaseDeleteTruncateTestCase extends DatabaseTestCase {
   /**
    * Confirm that we can truncate a whole table successfully.
    */
-  function testTruncate() {
+  function SKIP_testTruncate() {
     $num_records_before = db_query("SELECT COUNT(*) FROM {test}")->fetchField();
 
     db_truncate('test')->execute();
@@ -1315,7 +1318,7 @@ class DatabaseSelectTestCase extends DatabaseTestCase {
   /**
    * Test rudimentary SELECT statements.
    */
-  function testSimpleSelect() {
+  function SKIP_testSimpleSelect() {
     $query = db_select('test');
     $name_field = $query->addField('test', 'name');
     $age_field = $query->addField('test', 'age', 'age');
@@ -1332,7 +1335,7 @@ class DatabaseSelectTestCase extends DatabaseTestCase {
   /**
    * Test rudimentary SELECT statement with a COMMENT.
    */
-  function testSimpleComment() {
+  function SKIP_testSimpleComment() {
     $query = db_select('test')->comment('Testing query comments');
     $name_field = $query->addField('test', 'name');
     $age_field = $query->addField('test', 'age', 'age');
@@ -1374,7 +1377,7 @@ class DatabaseSelectTestCase extends DatabaseTestCase {
   /**
    * Test basic conditionals on SELECT statements.
    */
-  function testSimpleSelectConditional() {
+  function SKIP_testSimpleSelectConditional() {
     $query = db_select('test');
     $name_field = $query->addField('test', 'name');
     $age_field = $query->addField('test', 'age', 'age');
@@ -1394,7 +1397,7 @@ class DatabaseSelectTestCase extends DatabaseTestCase {
   /**
    * Test SELECT statements with expressions.
    */
-  function testSimpleSelectExpression() {
+  function SKIP_testSimpleSelectExpression() {
     $query = db_select('test');
     $name_field = $query->addField('test', 'name');
     $age_field = $query->addExpression("age*2", 'double_age');
@@ -1414,7 +1417,7 @@ class DatabaseSelectTestCase extends DatabaseTestCase {
   /**
    * Test SELECT statements with multiple expressions.
    */
-  function testSimpleSelectExpressionMultiple() {
+  function SKIP_testSimpleSelectExpressionMultiple() {
     $query = db_select('test');
     $name_field = $query->addField('test', 'name');
     $age_double_field = $query->addExpression("age*2");
@@ -1436,7 +1439,7 @@ class DatabaseSelectTestCase extends DatabaseTestCase {
   /**
    * Test adding multiple fields to a select statement at the same time.
    */
-  function testSimpleSelectMultipleFields() {
+  function SKIP_testSimpleSelectMultipleFields() {
     $record = db_select('test')
       ->fields('test', array('id', 'name', 'age', 'job'))
       ->condition('age', 27)
@@ -1459,7 +1462,7 @@ class DatabaseSelectTestCase extends DatabaseTestCase {
   /**
    * Test adding all fields from a given table to a select statement.
    */
-  function testSimpleSelectAllFields() {
+  function SKIP_testSimpleSelectAllFields() {
     $record = db_select('test')
       ->fields('test')
       ->condition('age', 27)
@@ -1829,7 +1832,7 @@ class DatabaseSelectOrderedTestCase extends DatabaseTestCase {
   /**
    * Test basic order by.
    */
-  function testSimpleSelectOrdered() {
+  function SKIP_testSimpleSelectOrdered() {
     $query = db_select('test');
     $name_field = $query->addField('test', 'name');
     $age_field = $query->addField('test', 'age', 'age');
@@ -1850,7 +1853,7 @@ class DatabaseSelectOrderedTestCase extends DatabaseTestCase {
   /**
    * Test multiple order by.
    */
-  function testSimpleSelectMultiOrdered() {
+  function SKIP_testSimpleSelectMultiOrdered() {
     $query = db_select('test');
     $name_field = $query->addField('test', 'name');
     $age_field = $query->addField('test', 'age', 'age');
@@ -1881,7 +1884,7 @@ class DatabaseSelectOrderedTestCase extends DatabaseTestCase {
   /**
    * Test order by descending.
    */
-  function testSimpleSelectOrderedDesc() {
+  function SKIP_testSimpleSelectOrderedDesc() {
     $query = db_select('test');
     $name_field = $query->addField('test', 'name');
     $age_field = $query->addField('test', 'age', 'age');
@@ -2790,7 +2793,7 @@ class DatabaseRegressionTestCase extends DatabaseTestCase {
   /**
    * Test the db_table_exists() function.
    */
-  function testDBTableExists() {
+  function SKIP_testDBTableExists() {
     $this->assertIdentical(TRUE, db_table_exists('test'), t('Returns true for existent table.'));
     $this->assertIdentical(FALSE, db_table_exists('nosuchtable'), t('Returns false for nonexistent table.'));
   }
@@ -2798,7 +2801,7 @@ class DatabaseRegressionTestCase extends DatabaseTestCase {
   /**
    * Test the db_field_exists() function.
    */
-  function testDBFieldExists() {
+  function SKIP_testDBFieldExists() {
     $this->assertIdentical(TRUE, db_field_exists('test', 'id'), t('Returns true for existent column.'));
     $this->assertIdentical(FALSE, db_field_exists('test', 'nosuchcolumn'), t('Returns false for nonexistent column.'));
   }
@@ -2806,7 +2809,7 @@ class DatabaseRegressionTestCase extends DatabaseTestCase {
   /**
    * Test the db_index_exists() function.
    */
-  function testDBIndexExists() {
+  function SKIP_testDBIndexExists() {
     $this->assertIdentical(TRUE, db_index_exists('test', 'ages'), t('Returns true for existent index.'));
     $this->assertIdentical(FALSE, db_index_exists('test', 'nosuchindex'), t('Returns false for nonexistent index.'));
   }
@@ -3061,7 +3064,7 @@ class DatabaseBasicSyntaxTestCase extends DatabaseTestCase {
   /**
    * Test for string concatenation.
    */
-  function testBasicConcat() {
+  function SKIP_testBasicConcat() {
     $result = db_query('SELECT CONCAT(:a1, CONCAT(:a2, CONCAT(:a3, CONCAT(:a4, :a5)))) FROM {test}', array(
       ':a1' => 'This',
       ':a2' => ' ',
@@ -3075,7 +3078,7 @@ class DatabaseBasicSyntaxTestCase extends DatabaseTestCase {
   /**
    * Test for string concatenation with field values.
    */
-  function testFieldConcat() {
+  function SKIP_testFieldConcat() {
     $sql = 'SELECT CONCAT(:a1, CONCAT(name, CONCAT(:a2, CONCAT(TRIM(CHAR(age)), :a3)))) FROM {test} WHERE age = :age';
 		$args =  array(
       ':a1' => 'The age of ',
@@ -3780,7 +3783,7 @@ class DatabaseNextIdCase extends DrupalWebTestCase {
   /**
    * Test that the sequences API work.
    */
-  function testDbNextId() {
+  function SKIP_testDbNextId() {
     $first = db_next_id();
     $second = db_next_id();
     // We can test for exact increase in here because we know there is no
@@ -3807,7 +3810,7 @@ class DatabaseEmptyStatementTestCase extends DrupalWebTestCase {
   /**
    * Test that the empty result set behaves as empty.
    */
-  function testEmpty() {
+  function SKIP_testEmpty() {
     $result = new DatabaseStatementEmpty();
 
     $this->assertTrue($result instanceof DatabaseStatementInterface, t('Class implements expected interface'));
@@ -3817,7 +3820,7 @@ class DatabaseEmptyStatementTestCase extends DrupalWebTestCase {
   /**
    * Test that the empty result set iterates safely.
    */
-  function testEmptyIteration() {
+  function SKIP_testEmptyIteration() {
     $result = new DatabaseStatementEmpty();
 
     foreach ($result as $record) {
@@ -3831,7 +3834,7 @@ class DatabaseEmptyStatementTestCase extends DrupalWebTestCase {
   /**
    * Test that the empty result set mass-fetches in an expected way.
    */
-  function testEmptyFetchAll() {
+  function SKIP_testEmptyFetchAll() {
     $result = new DatabaseStatementEmpty();
 
     $this->assertEqual($result->fetchAll(), array(), t('Empty array returned from empty result set.'));

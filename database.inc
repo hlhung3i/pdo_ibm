@@ -8,41 +8,40 @@
 
 require_once dirname(__FILE__) . '/tests/devel.inc';
 
-
 /**
- * Empty string placeholder for Oracle.
+ * Empty string placeholder for DB2.
  */
 define('DB2_EMPTY_STRING_PLACEHOLDER', 'E#');
 
 /**
- * Long identifier placeholder (prefix) for Oracle.
+ * Long identifier placeholder (prefix) for DB2.
  */
 define('DB2_LONG_IDENTIFIER_PLACEHOLDER', 'L#');
 
 /**
- * Range query row number placeholder for Oracle.
+ * Range query row number placeholder for DB2.
  */
 define('DB2_RANGE_ROWNUM_PLACEHOLDER', 'R#');
 
 /**
- * Identifier max length limitation for Oracle.
+ * Identifier max length limitation for DB2.
  */
-define('DB2_MAX_IDENTIFIER_LENGTH', 30);
+define('DB2_MAX_IDENTIFIER_LENGTH', 128);
 
 /**
- * NVARCHAR2 max length limitation for Oracle.
+ * NVARCHAR2 max length limitation for DB2. (Max 32672 in bytes, ie. max 8000 UTF8 chars)
  */
-define('DB2_MAX_NVARCHAR2_LENGTH', 2000);
+define('DB2_MAX_NVARCHAR2_LENGTH', 8000);
 
 /**
- * NCHAR max length limitation for Oracle.
+ * NCHAR max length limitation for DB2. (Max 254 in bytes, ie. max 63 UTF8 chars)
  */
-define('DB2_MAX_NCHAR_LENGTH', 1000);
+define('DB2_MAX_NCHAR_LENGTH', 63);
 
 /**
- * NUMBER max length limitation for Oracle.
+ * NUMBER max length limitation for DB2.
  */
-define('DB2_MAX_NUMBER_LENGTH', 38);
+define('DB2_MAX_NUMBER_LENGTH', 31);
 
 /**
  * @ingroup database
@@ -60,42 +59,37 @@ class DatabaseConnection_ibm extends DatabaseConnection {
     // This driver defaults to transaction support, except if explicitly passed FALSE.
     $this->transactionSupport = !isset($connection_options['transactions']) || ($connection_options['transactions'] !== FALSE);
 
-
-    // -- ## TODO: connection string ## -- //
     // Transactional DDL is not available in Oracle.
     $this->transactionalDDLSupport = FALSE;
 
     $this->connectionOptions = $connection_options;
 
-// $dsn = 'ibm:DRIVER={IBM DB2 ODBC DRIVER};DATABASE=SAMPLE;';
     $dsn = 'ibm:hostname=' . $connection_options['host'] . ';' .  'database='. $connection_options['database'] . ';' .  'port='.(empty($connection_options['port']) ? '50000' : $connection_options['port']) . ';' .  'protocol=TCPIP;EnableScrollableCursors=1';
 
     // Allow PDO options to be overridden.
     $connection_options += array(
       'pdo' => array(),
     );
-$connection_options['pdo'] += array(
+    $connection_options['pdo'] += array(
       // Prepared statements are most effective for performance when queries
       // are recycled (used several times). However, if they are not re-used,
       // prepared statements become ineffecient. Since most of Drupal's
       // prepared queries are not re-used, it should be faster to emulate
       // the preparation than to actually ready statements for re-use. If in
       // doubt, reset to FALSE and measure performance.
-PDO::ATTR_EMULATE_PREPARES => TRUE,
+      PDO::ATTR_EMULATE_PREPARES => TRUE,
       // Convert numeric values to strings when fetching.
-PDO::ATTR_STRINGIFY_FETCHES => TRUE,
+      PDO::ATTR_STRINGIFY_FETCHES => TRUE,
       // Force column names to lower case.
-PDO::ATTR_CASE => PDO::CASE_LOWER,
+      PDO::ATTR_CASE => PDO::CASE_LOWER,
       // Enable autocommit on every single statement.
-PDO::ATTR_AUTOCOMMIT => TRUE,
-// PDO::ATTR_PERSISTENT => TRUE, // Lead error
-);
+      PDO::ATTR_AUTOCOMMIT => TRUE,
+    );
     parent::__construct($dsn, $connection_options['username'], $connection_options['password'], $connection_options['pdo']);
 
     $connection_options += array(
       'init_commands' => array(),
     );
-    // -- ## TODO: initial session settings ## -- //
 //    $connection_options['init_commands'] += array(
       // Force cursor sharing to prevent unfair modules.
       // See http://www.dba-oracle.com/t_cursor_sharing_force.htm.
@@ -125,19 +119,16 @@ PDO::ATTR_AUTOCOMMIT => TRUE,
     $options += $this->defaultOptions();
 
     try {
+echo 'ibm/database.inc query() <br /><div>';
+print_r($query);
+echo '</div><br />';
       if ($query instanceof DatabaseStatementInterface) {
         $stmt = $query;
-echo $stmt->getQueryString() . '<br />';
-print_r($args);
-echo '<br /><br />';
         $stmt->execute(NULL, $options);
       }
       else {
         $this->expandArguments($query, $args);
         $stmt = $this->prepareQuery($query);
-echo $stmt->getQueryString() . '<br />';
-print_r($args);
-echo '<br /><br />';
         $stmt->execute($args, $options);
       }
 
@@ -173,9 +164,9 @@ echo '<br /><br />';
     }
   }
 
-//  public function prepare($query, $options = array()) { // Mike
-//    return new DatabaseStatement_ibm($this, $query, $options); // Mike
-//  } // Mike
+//   public function prepare($query, $options = array()) { // Mike
+//     return new DatabaseStatement_ibm($this, $query, $options); // Mike
+//   } // Mike
 
   public function PDOPrepare($query, array $options = array()) {
     return parent::prepare($query, $options);
@@ -193,7 +184,6 @@ echo '<br /><br />';
   public function escapeForDB2($query) {
     $query = $this->escapeReservedWords($query);
     $query = $this->escapeEmptyString($query);
-//    $query = $this->escapeLongIdentifiers($query); // Mike
     return $query;
   }
 
@@ -330,7 +320,25 @@ echo '<br /><br />';
     return $data;
   }
 
-  // -- ## NOTE: by Mike ## -- //
+  public function version() {
+    $sql = 'SELECT service_level FROM TABLE(SYSPROC.ENV_GET_INST_INFO())';
+    try {
+      $results = db_query($sql);
+      foreach ($results as $result) {
+        $field = $result->service_level;
+        $matches = null;
+        if (preg_match('/(?:[0-9]{1,2}\.[0-9]{1,2})/', $result->service_level, $matches)) {
+          $version = $matches[0];
+          return $version;
+        } else {
+          return null;
+        }
+      }
+    } catch (PDOException $e) {
+        return null;
+    }
+  }
+
   public function queryRange($query, $from, $count, array $args = array(), array $options = array()) {
     return $this->query('SELECT * FROM (SELECT SUB1.*, rownumber() over ()  AS ' . DB2_RANGE_ROWNUM_PLACEHOLDER . ' FROM (' . $query . ') SUB1) WHERE ' . DB2_RANGE_ROWNUM_PLACEHOLDER . ' BETWEEN ' . ($from + 1) . ' AND ' . ($from + $count), $args, $options);
   }
@@ -358,14 +366,21 @@ echo '<br /><br />';
   }
 
   public function mapConditionOperator($operator) {
-    return NULL;
-	}
+    static $specials;
 
+    // Function calls not allowed in static declarations, thus this method.
+    if (!isset($specials)) {
+      $specials['LIKE'] = array('postfix' => " ESCAPE '\\'");
+      $specials['NOT LIKE'] = array('postfix' => " ESCAPE '\\'");
+    }
+
+    return isset($specials[$operator]) ? $specials[$operator] : NULL;
+  }
 
   /**
    * Retrive a next id in a sequence.
    *
-   * Oracle has built in sequence. We'll use these instead of inserting
+   * DB2 has built in sequence. We'll use these instead of inserting
    * and updating a sequences table.
    */
   public function nextId($existing_id = 0) {
@@ -404,14 +419,16 @@ echo '<br /><br />';
       return $this->query('SELECT PREVVAL FOR '. $name . ' FROM SYSIBM.SYSDUMMY1')->fetchField();
     }
     catch (PDOException $e) {
-      // Ignore SQL0845N A PREVIOUS VALUE expression cannot be used before the NEXT VALUE expression generates a value in the current session for sequence "SEQID = <seqid>".
+echo 'ibm/database.inc lastInsertId()<br /><div>';
+print_r($e->query_string);
+echo '</div><br />';
+      // TODO: Ignore SQL0845N A PREVIOUS VALUE expression cannot be used before the NEXT VALUE expression generates a value in the current session for sequence "SEQID = <seqid>".
       if (!(isset($e->errorInfo) && is_array($e->errorInfo) && $e->errorInfo[1] == '8002')) {
         throw $e;
       }
     }
   }
 
-  // -- ## TODO: need check rollback transaction ## -- //
   public function rollback($savepoint_name = 'drupal_transaction') {
     if (!$this->supportsTransactions()) {
       return;
@@ -467,7 +484,7 @@ echo '<br /><br />';
     // If we're already in a transaction then we want to create a savepoint
     // rather than try to create another transaction.
     if ($this->inTransaction()) {
-      $this->query('SAVEPOINT ' . $name);
+      $this->query('SAVEPOINT ' . $name . ' ON ROLLBACK RETAIN CURSORS');
     }
     else {
       $this->setAttribute(PDO::ATTR_AUTOCOMMIT, FALSE);
@@ -505,6 +522,8 @@ echo '<br /><br />';
       unset($this->transactionLayers[$name]);
       if (empty($this->transactionLayers)) {
         try {
+echo 'database.inc popCommittableTransactions() <br />';
+echo '<br />';
           if (!PDO::commit()) {
             throw new DatabaseTransactionCommitFailedException();
           }
@@ -520,9 +539,6 @@ echo '<br /><br />';
     }
   }
 
-
-  // -- ## Mike 20120823 stopped here -- ## //
-
   /**
    * Returns an array of reserved words (lowercase) for this DB.
    *
@@ -531,29 +547,25 @@ echo '<br /><br />';
    */
   public function getReservedWords() {
     $reserved_words = array (
-//      'access', 'add', 'all', 'alter', 'and', 'any', 'as', 'asc', 'audit',
-//      'between', 'by', 'char', 'check', 'cluster', 'column', 'comment',
-//      'compress', 'connect', 'create', 'current', 'date', 'decimal',
-//      'default', 'delete', 'desc', 'distinct', 'drop', 'else', 'exclusive',
-//      'exists', 'file', 'float', 'for', 'from', 'grant', 'group', 'having',
-//      'identified', 'immediate', 'in', 'increment', 'index', 'initial',
-//      'insert', 'integer', 'intersect', 'into', 'is', 'level', 'like', 'lock',
-//      'long', 'maxextents', 'minus', 'mlslabel', 'mode', 'modify', 'nchar',
-//      'nclob', 'noaudit', 'nocompress', 'not', 'nowait', 'null', 'number',
-//      'nvarchar2', 'of', 'offline', 'on', 'online', 'option', 'or', 'order',
-//      'pctfree', 'prior', 'privileges', 'public', 'raw', 'rename', 'resource',
-//      'revoke', 'row', 'rowid', 'rownum', 'rows', 'select', 'session', 'set',
-//      'share', 'size', 'smallint', 'start', 'successful', 'synonym',
-//      'sysdate', 'table', 'then', 'to', 'trigger', 'uid', 'union', 'unique',
-//      'update', 'user', 'validate', 'values', 'varchar', 'varchar2', 'view',
-//      'whenever', 'where', 'with'
-'add', 'after', 'all', 'allocate', 'allow', 'alter', 'and', 'any', 'as', 'asensitive', 'associate', 'asutime', 'at', 'audit', 'aux', 'auxiliary', 'before', 'begin', 'between', 'bufferpool', 'by', 'call', 'capture', 'cascaded', 'case', 'cast', 'ccsid', 'char', 'character', 'check', 'clone', 'close', 'cluster', 'collection', 'collid', 'column', 'comment', 'commit', 'concat', 'condition', 'connect', 'connection', 'constraint', 'contains', 'content', 'continue', 'create', 'current', 'current_date', 'current_lc_ctype', 'current_path', 'current_schema', 'current_time', 'current_timestamp', 'cursor', 'data', 'database', 'day', 'days', 'dbinfo', 'declare', 'default', 'delete', 'descriptor', 'deterministic', 'disable', 'disallow', 'distinct', 'do', 'document', 'double', 'drop', 'dssize', 'dynamic', 'editproc', 'else', 'elseif', 'encoding', 'encryption', 'end', 'ending', 'end-exec2', 'erase', 'escape', 'except', 'exception', 'execute', 'exists', 'exit', 'explain', 'external', 'fenced', 'fetch', 'fieldproc', 'final', 'start of changefirst1end of change', 'for', 'free', 'from', 'full', 'function', 'generated', 'get', 'global', 'go', 'goto', 'grant', 'group', 'handler', 'having', 'hold', 'hour', 'hours', 'if', 'immediate', 'in', 'inclusive', 'index', 'inherit', 'inner', 'inout', 'insensitive', 'insert', 'intersect', 'into', 'is', 'isobid', 'iterate', 'jar', 'join', 'keep', 'key',
-'label', 'language', 'start of changelast1end of change', 'lc_ctype', 'leave', 'left', 'like', 'local', 'locale', 'locator', 'locators', 'lock', 'lockmax', 'locksize', 'long', 'loop', 'maintained', 'materialized', 'microsecond', 'microseconds', 'minute', 'minutes', 'modifies', 'month', 'months', 'start of changenext1end of change', 'nextval', 'no', 'none', 'not', 'null', 'nulls', 'numparts', 'obid', 'of', 'start of changeold1end of change', 'on', 'open', 'optimization', 'optimize', 'or', 'order', 'start of changeorganization1end of change', 'out', 'outer', 'package', 'parameter', 'part', 'padded', 'partition', 'partitioned', 'partitioning', 'path', 'piecesize', 'start of changeperiod1end of change', 'plan', 'precision', 'prepare', 'prevval', 'start of changeprior1end of change', 'priqty', 'privileges', 'procedure', 'program', 'psid', 'public', 'query', 'queryno', 'reads', 'references', 'refresh', 'resignal', 'release', 'rename', 'repeat', 'restrict', 'result', 'result_set_locator', 'return', 'returns', 'revoke', 'right', 'role', 'rollback', 'round_ceiling', 'round_down', 'round_floor', 'round_half_down', 'round_half_even', 'round_half_up', 'round_up', 'row', 'rowset', 'run', 'savepoint', 'schema', 'scratchpad', 'second', 'seconds', 'secqty', 'security', 'sequence', 'select', 'sensitive', 'session_user', 'set', 'signal', 'simple', 'some', 'source', 'specific', 'standard', 'static', 'statement', 'stay', 'stogroup', 'stores', 'style', 'summary', 'synonym', 'sysfun', 'sysibm', 'sysproc', 'system', 'table', 'tablespace', 'then', 'to', 'trigger', 'truncate', 'type', 'undo', 'union', 'unique', 'until', 'update', 'user', 'using', 'validproc', 'value', 'values', 'variable', 'variant', 'vcat', 'view', 'volatile', 'volumes', 'when', 'whenever', 'where', 'while', 'with', 'wlm', 'xmlexists', 'xmlnamespaces', 'xmlcast', 'year', 'years', 'zone'
-
+      'add', 'after', 'all', 'allocate', 'allow', 'alter', 'and', 'any', 'as', 'asensitive', 'associate', 'asutime', 'at', 'audit',
+      'aux', 'auxiliary', 'before', 'begin', 'between', 'bufferpool', 'by', 'call', 'capture', 'cascaded', 'case', 'cast', 'ccsid', 'char', 'character', 'check', 'clone', 'close', 'cluster', 'collection', 'collid', 'column', 'comment',
+      'commit', 'concat', 'condition', 'connect', 'connection', 'constraint', 'contains', 'content', 'continue', 'create', 'current', 'current_date', 'current_lc_ctype', 'current_path', 'current_schema', 'current_time', 'current_timestamp', 'cursor', 'data', 'database', 'day', 'days', 'dbinfo', 'declare',
+      'default', 'delete', 'descriptor', 'deterministic', 'disable', 'disallow', 'distinct', 'do', 'document', 'double', 'drop', 'dssize', 'dynamic', 'editproc', 'else', 'elseif', 'encoding', 'encryption', 'end', 'ending', 'end-exec2', 'erase', 'escape', 'except',
+      'exception', 'execute', 'exists', 'exit', 'explain', 'external', 'fenced', 'fetch', 'fieldproc', 'final', 'start of changefirst1end of change', 'for', 'free', 'from', 'full', 'function', 'generated', 'get', 'global', 'go', 'goto', 'grant', 'group', 'handler', 'having',
+      'hold', 'hour', 'hours', 'if', 'immediate', 'in', 'inclusive', 'index', 'inherit', 'inner', 'inout', 'insensitive',
+      'insert', 'intersect', 'into', 'is', 'isobid', 'iterate', 'jar', 'join', 'keep', 'key', 'label', 'language', 'start of changelast1end of change', 'lc_ctype', 'leave', 'left', 'like', 'local', 'locale', 'locator', 'locators', 'lock',
+      'lockmax', 'locksize', 'long', 'loop', 'maintained', 'materialized', 'microsecond', 'microseconds', 'minute', 'minutes', 'modifies', 'month', 'months', 'start of changenext1end of change', 'nextval', 'no',
+      'none', 'not', 'null', 'nulls', 'numparts', 'obid', 'of', 'start of changeold1end of change', 'on', 'open', 'optimization', 'optimize', 'or', 'order',
+      'start of changeorganization1end of change', 'out', 'outer', 'package', 'parameter', 'part', 'padded', 'partition', 'partitioned', 'partitioning', 'path', 'piecesize', 'start of changeperiod1end of change', 'plan', 'precision', 'prepare', 'prevval', 'start of changeprior1end of change', 'priqty', 'privileges', 'procedure', 'program', 'psid', 'public',
+      'query', 'queryno', 'reads', 'references', 'refresh', 'resignal', 'release', 'rename', 'repeat', 'restrict', 'result',
+      'result_set_locator', 'return', 'returns', 'revoke', 'right', 'role', 'rollback', 'round_ceiling', 'round_down', 'round_floor', 'round_half_down', 'round_half_even', 'round_half_up', 'round_up', 'row', 'rowset', 'run',
+      'savepoint', 'schema', 'scratchpad', 'second', 'seconds', 'secqty', 'security', 'sequence', 'select', 'sensitive', 'session_user', 'set', 'signal', 'simple', 'some', 'source', 'specific', 'standard', 'static', 'statement', 'stay', 'stogroup', 'stores', 'style', 'summary', 'synonym', 'sysfun', 'sysibm', 'sysproc', 'system', 'table', 'tablespace',
+      'then', 'to', 'trigger', 'truncate', 'type', 'undo', 'union', 'unique', 'until', 'update', 'user', 'using',
+      'validproc', 'value', 'values', 'variable', 'variant', 'vcat', 'view', 'volatile', 'volumes', 'when', 'whenever', 'where', 'while', 'with', 'wlm',
+      'xmlexists', 'xmlnamespaces', 'xmlcast', 'year', 'years', 'zone'
     );
     return $reserved_words;
   }
-
 }
 
 // class DatabaseStatement_ibm extends DatabaseStatementPrefetch implements Iterator, DatabaseStatementInterface {
@@ -604,12 +616,11 @@ echo '<br /><br />';
 //     catch (PDOException $e) {
 //       // Long identifier replacement is expensive especially if execute
 //       // for all queries. Therefore just preform during exception be thrown.
-// 		// TODO: Replace Oracle handles
-//       if (isset($e->errorInfo) && is_array($e->errorInfo) && $e->errorInfo[1] == '00972' && !isset($options['ORA-00972'])) {
-//         $options['ORA-00972'] = TRUE;
-//         $this->queryString = $this->dbh->escapeLongIdentifiers($this->queryString);
-//         return $this->execute($args, $options);
-//       }
+// //       if (isset($e->errorInfo) && is_array($e->errorInfo) && $e->errorInfo[1] == '00972' && !isset($options['ORA-00972'])) {
+// //         $options['ORA-00972'] = TRUE;
+// //         $this->queryString = $this->dbh->escapeLongIdentifiers($this->queryString);
+// //         return $this->execute($args, $options);
+// //       }
 //     }
 // 
 //     try {
@@ -622,7 +633,6 @@ echo '<br /><br />';
 //       unset($statement);
 //       $this->resultRowCount = count($this->data);
 //     }
-// 		// TODO: Replace Oracle handles
 //     catch (PDOException $e) {
 //       // Ignore ORA-24374: define not done before fetch or execute and fetch.
 //       if (!(isset($e->errorInfo) && is_array($e->errorInfo) && $e->errorInfo[1] == '24374')) {
