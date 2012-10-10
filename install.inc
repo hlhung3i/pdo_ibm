@@ -39,6 +39,11 @@ class DatabaseTasks_ibm extends DatabaseTasks {
 
   /**
    * Make DB2 Drupal friendly.
+   *
+   *   substring: DB2 native
+   *   substring_index: implemented
+   *   rand: DB2 native
+   *
    */
   public function initializeDatabase() {
     try {

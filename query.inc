@@ -233,7 +233,6 @@ class UpdateQuery_ibm extends UpdateQuery {
   }
 
   public function execute() {
-var_dump(debug_backtrace());
 
     $max_placeholder = 0;
     $blobs = array();

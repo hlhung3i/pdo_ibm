@@ -20,7 +20,7 @@ class DatabaseSchema_ibm extends DatabaseSchema {
   /**
    * Maximum length of a column comment in MySQL.
    */
-  const COMMENT_MAX_COLUMN = 255;
+  const COMMENT_MAX_COLUMN = 254;
 
   /**
    * Get information about the table and database name from the prefix.
@@ -238,14 +238,14 @@ class DatabaseSchema_ibm extends DatabaseSchema {
 
     // Add table comment.
     if (!empty($table['description'])) {
-      $statements[] = $this->connection->prepare('COMMENT ON TABLE ' . $table_name . ' IS ' . $this->prepareComment($table['description']));
+      $statements[] = $this->connection->prepare('COMMENT ON TABLE ' . $table_name . ' IS ' . $this->prepareComment((strlen($table['description']) > $this->COMMENT_MAX_TABLE) ? substr($table['description'], 1, $this->COMMENT_MAX_TABLE) : $table['description']));
     }
 
     // Add column comments.
     foreach ($table['fields'] as $field_name => $field) {
       if (!empty($field['description'])) {
         $field_name = $this->connection->escapeForDB2($field_name);
-        $statements[] = $this->connection->prepare('COMMENT ON COLUMN ' . $table_name . '.' . $field_name . ' IS ' . $this->prepareComment($field['description']));
+        $statements[] = $this->connection->prepare('COMMENT ON COLUMN ' . $table_name . '.' . $field_name . ' IS ' . $this->prepareComment((strlen($field['description']) > $this->COMMENT_MAX_COLUMN) ? substr($field['description'], 1, $this->COMMENT_MAX_COLUMN) : $field['description']));
       }
     }
 
@@ -273,14 +273,15 @@ class DatabaseSchema_ibm extends DatabaseSchema {
 
     // With poor DB2 we have a lots of limitation.
 		// 2012-10-08 Length x4 for UTF8 character set
+    // 2012-10-10 Restore to normal for installation test
     if (isset($spec['precision']) && isset($spec['scale'])) {
       $sql .= '(' . min($spec['precision'], DB2_MAX_NUMBER_LENGTH) . ', ' . $spec['scale'] . ')';
     }
     elseif ($spec['ibm_type'] == 'VARCHAR') {
-      $sql .= '(' . (isset($spec['length']) ? min($spec['length']*4, DB2_MAX_NVARCHAR2_LENGTH) : DB2_MAX_NVARCHAR2_LENGTH) . ')';
+      $sql .= '(' . (isset($spec['length']) ? min($spec['length']*2, DB2_MAX_NVARCHAR2_LENGTH) : DB2_MAX_NVARCHAR2_LENGTH) . ')';
     }
     elseif ($spec['ibm_type'] == 'CHAR') {
-      $sql .= '(' . (isset($spec['length']) ? min($spec['length']*4, DB2_MAX_NCHAR_LENGTH) : DB2_MAX_NCHAR_LENGTH) . ')';
+      $sql .= '(' . (isset($spec['length']) ? min($spec['length']*2, DB2_MAX_NCHAR_LENGTH) : DB2_MAX_NCHAR_LENGTH) . ')';
     }
     elseif ($spec['ibm_type'] == 'DECIMAL') {
       $sql .= '(' . (isset($spec['length']) ? min($spec['length'], DB2_MAX_NUMBER_LENGTH) : DB2_MAX_NUMBER_LENGTH) . ')';
@@ -395,7 +396,10 @@ class DatabaseSchema_ibm extends DatabaseSchema {
     $return = array();
     foreach ($fields as $field) {
       if (is_array($field)) {
-        $return[] = 'SUBSTR(' . $field[0] . ', 1, ' . $field[1] . ')';
+        // DB2 do not support Index column with SUBSTR
+        // only index the whole column
+        // $return[] = 'SUBSTR(' . $field[0] . ', 1, ' . $field[1] . ')';
+        $return[] = $field[0];
       }
       else {
         $return[] = $field;

@@ -29,12 +29,13 @@ define('DB2_RANGE_ROWNUM_PLACEHOLDER', 'R#');
 define('DB2_MAX_IDENTIFIER_LENGTH', 128);
 
 /**
- * NVARCHAR2 max length limitation for DB2. (Max 32672 in bytes, ie. max 8000 UTF8 chars)
+ * NVARCHAR2 max length limitation for DB2. (Max 32704 in bytes, ie. max 8000 UTF8 chars)
+ * But it need larger page size (default 4k) for such storage
  */
-define('DB2_MAX_NVARCHAR2_LENGTH', 8000);
+define('DB2_MAX_NVARCHAR2_LENGTH', 2000);
 
 /**
- * NCHAR max length limitation for DB2. (Max 254 in bytes, ie. max 63 UTF8 chars)
+ * NCHAR max length limitation for DB2. (Max 254 in bytes, ie. max 63 (254/4) UTF8 chars)
  */
 define('DB2_MAX_NCHAR_LENGTH', 63);
 
@@ -119,9 +120,6 @@ class DatabaseConnection_ibm extends DatabaseConnection {
     $options += $this->defaultOptions();
 
     try {
-echo 'ibm/database.inc query() <br /><div>';
-print_r($query);
-echo '</div><br />';
       if ($query instanceof DatabaseStatementInterface) {
         $stmt = $query;
         $stmt->execute(NULL, $options);
@@ -198,13 +196,16 @@ echo '</div><br />';
       '/^(' . $reserved_words . ')$/',
       '/:(' . $reserved_words . ')([\)\.\s\=\,])/',
       '/([\(\.\s\=\,])(' . $reserved_words . ')([\)\.\s\=\,])/',
+      '/([\(\.\s\=\,])(' . $reserved_words . ')$/',
     );
     $replacement = array(
       '"$1"',
       ':$1$2',
       '$1"$2"$3',
+      '$1"$2"',
     );
-    return preg_replace($pattern, $replacement, $query);
+    $ret = preg_replace($pattern, $replacement, $query);
+    return $ret;
   }
 
   public function escapeEmptyString($query) {
@@ -419,9 +420,6 @@ echo '</div><br />';
       return $this->query('SELECT PREVVAL FOR '. $name . ' FROM SYSIBM.SYSDUMMY1')->fetchField();
     }
     catch (PDOException $e) {
-echo 'ibm/database.inc lastInsertId()<br /><div>';
-print_r($e->query_string);
-echo '</div><br />';
       // TODO: Ignore SQL0845N A PREVIOUS VALUE expression cannot be used before the NEXT VALUE expression generates a value in the current session for sequence "SEQID = <seqid>".
       if (!(isset($e->errorInfo) && is_array($e->errorInfo) && $e->errorInfo[1] == '8002')) {
         throw $e;
@@ -522,8 +520,6 @@ echo '</div><br />';
       unset($this->transactionLayers[$name]);
       if (empty($this->transactionLayers)) {
         try {
-echo 'database.inc popCommittableTransactions() <br />';
-echo '<br />';
           if (!PDO::commit()) {
             throw new DatabaseTransactionCommitFailedException();
           }
