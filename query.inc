@@ -79,9 +79,9 @@ class InsertQuery_ibm extends InsertQuery {
               $stmt->bindParam(':db_insert_placeholder_' . $max_placeholder++, $insert_values[$idx], PDO::PARAM_LOB);
             }
           }
-          elseif ($insert_values[$idx] === '') {
-            $stmt->bindValue(':db_insert_placeholder_' . $max_placeholder++, DB2_EMPTY_STRING_PLACEHOLDER);
-          }
+// [EMPTY]            elseif ($insert_values[$idx] === '') {
+// [EMPTY]              $stmt->bindValue(':db_insert_placeholder_' . $max_placeholder++, DB2_EMPTY_STRING_PLACEHOLDER);
+// [EMPTY]            }
           else {
             $stmt->bindParam(':db_insert_placeholder_' . $max_placeholder++, $insert_values[$idx]);
           }
@@ -117,12 +117,12 @@ class InsertQuery_ibm extends InsertQuery {
         // the foreach statement assigns the element to the existing reference.
         $arguments = $this->fromQuery->getArguments();
         foreach ($arguments as $key => $value) {
-          if ($arguments[$key] === '') {
-            $stmt->bindValue($key, DB2_EMPTY_STRING_PLACEHOLDER);
-          }
-          else {
+// [EMPTY]            if ($arguments[$key] === '') {
+// [EMPTY]              $stmt->bindValue($key, DB2_EMPTY_STRING_PLACEHOLDER);
+// [EMPTY]            }
+// [EMPTY]            else {
             $stmt->bindParam($key, $arguments[$key]);
-          }
+// [EMPTY]            }
         }
       }
 
@@ -296,12 +296,12 @@ class UpdateQuery_ibm extends UpdateQuery {
           // We assume that an expression will never happen on a BLOB field,
           // which is a fairly safe assumption to make since in most cases
           // it would be an invalid query anyway.
-          if ($data['arguments'][$placeholder] === '') {
-            $stmt->bindValue($placeholder, DB2_EMPTY_STRING_PLACEHOLDER);
-          }
-          else {
+// [EMPTY]            if ($data['arguments'][$placeholder] === '') {
+// [EMPTY]              $stmt->bindValue($placeholder, DB2_EMPTY_STRING_PLACEHOLDER);
+// [EMPTY]            }
+// [EMPTY]            else {
             $stmt->bindParam($placeholder, $data['arguments'][$placeholder]);
-          }
+// [EMPTY]            }
         }
       }
       unset($fields[$field]);
@@ -325,9 +325,9 @@ class UpdateQuery_ibm extends UpdateQuery {
           $stmt->bindParam(':db_update_placeholder_' . $max_placeholder++, $fields[$field], PDO::PARAM_LOB);
         }
       }
-      elseif ($fields[$field] === '') {
-        $stmt->bindValue(':db_update_placeholder_' . $max_placeholder++, DB2_EMPTY_STRING_PLACEHOLDER);
-      }
+// [EMPTY]        elseif ($fields[$field] === '') {
+// [EMPTY]          $stmt->bindValue(':db_update_placeholder_' . $max_placeholder++, DB2_EMPTY_STRING_PLACEHOLDER);
+// [EMPTY]        }
       else {
         $stmt->bindParam(':db_update_placeholder_' . $max_placeholder++, $fields[$field]);
       }
@@ -338,12 +338,12 @@ class UpdateQuery_ibm extends UpdateQuery {
 
       $arguments = $this->condition->arguments();
       foreach ($arguments as $placeholder => $value) {
-        if ($arguments[$placeholder] === '') {
-          $stmt->bindValue($placeholder, DB2_EMPTY_STRING_PLACEHOLDER);
-        }
-        else {
+// [EMPTY]          if ($arguments[$placeholder] === '') {
+// [EMPTY]            $stmt->bindValue($placeholder, DB2_EMPTY_STRING_PLACEHOLDER);
+// [EMPTY]          }
+// [EMPTY]          else {
           $stmt->bindParam($placeholder, $arguments[$placeholder]);
-        }
+// [EMPTY]          }
       }
     }
 

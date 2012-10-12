@@ -175,13 +175,13 @@ class DatabaseConnection_ibm extends DatabaseConnection {
     // performance concern.
     $query = $this->prefixTables($query);
     $query = $this->escapeReservedWords($query);
-    $query = $this->escapeEmptyString($query);
+//    $query = $this->escapeEmptyString($query);
     return $this->prepare($query);
   }
 
   public function escapeForDB2($query) {
     $query = $this->escapeReservedWords($query);
-    $query = $this->escapeEmptyString($query);
+//    $query = $this->escapeEmptyString($query);
     return $query;
   }
 
@@ -208,17 +208,17 @@ class DatabaseConnection_ibm extends DatabaseConnection {
     return $ret;
   }
 
-  public function escapeEmptyString($query) {
-    $search = array(
-      '',
-      "''",
-    );
-    $replace = array(
-      DB2_EMPTY_STRING_PLACEHOLDER,
-      "'" . DB2_EMPTY_STRING_PLACEHOLDER . "'",
-    );
-    return str_replace($search, $replace, $query);
-  }
+// [EMPTY]   public function escapeEmptyString($query) {
+// [EMPTY]     $search = array(
+// [EMPTY]       '',
+// [EMPTY]       "''",
+// [EMPTY]     );
+// [EMPTY]     $replace = array(
+// [EMPTY]       DB2_EMPTY_STRING_PLACEHOLDER,
+// [EMPTY]       "'" . DB2_EMPTY_STRING_PLACEHOLDER . "'",
+// [EMPTY]     );
+// [EMPTY]     return str_replace($search, $replace, $query);
+// [EMPTY]   }
 
 //E    public function escapeLongIdentifiers($query) {
 //E      $pattern = array(
@@ -274,10 +274,10 @@ class DatabaseConnection_ibm extends DatabaseConnection {
           unset($data[$key]);
         }
         // Column name is present as shorthand.
-        elseif (strpos($key, DB2_LONG_IDENTIFIER_PLACEHOLDER) === 0 && isset($shorthand[$key])) {
-          $data[$shorthand[$key]] = $this->restoreForDB2($value);
-          unset($data[$key]);
-        }
+// [LONG]         elseif (strpos($key, DB2_LONG_IDENTIFIER_PLACEHOLDER) === 0 && isset($shorthand[$key])) {
+// [LONG]           $data[$shorthand[$key]] = $this->restoreForDB2($value);
+// [LONG]           unset($data[$key]);
+// [LONG]         }
         else {
           $data[$key] = $this->restoreForDB2($value);
         }
@@ -291,24 +291,24 @@ class DatabaseConnection_ibm extends DatabaseConnection {
           unset($data->{$key});
         }
         // Column name is present as shorthand.
-        elseif (strpos($key, DB2_LONG_IDENTIFIER_PLACEHOLDER) === 0 && isset($shorthand[$key])) {
-          $data->{$shorthand[$key]} = $this->restoreForDB2($value);
-          unset($data->{$key});
-        }
+// [LONG]         elseif (strpos($key, DB2_LONG_IDENTIFIER_PLACEHOLDER) === 0 && isset($shorthand[$key])) {
+// [LONG]           $data->{$shorthand[$key]} = $this->restoreForDB2($value);
+// [LONG]           unset($data->{$key});
+// [LONG]         }
         else {
           $data->{$key} = $this->restoreForDB2($value);
         }
       }
     }
     // Restore string value.
-    elseif (is_string($data)) {
-      if ($data === DB2_EMPTY_STRING_PLACEHOLDER) {
-        return '';
-      }
-      elseif (strpos($data, DB2_LONG_IDENTIFIER_PLACEHOLDER) === 0 && isset($shorthand[$data])) {
-        return $shorthand[$data];
-      }
-    }
+// [EMPTY]     elseif (is_string($data)) {
+// [EMPTY]       if ($data === DB2_EMPTY_STRING_PLACEHOLDER) {
+// [EMPTY]         return '';
+// [EMPTY]       }
+// [LONG]       elseif (strpos($data, DB2_LONG_IDENTIFIER_PLACEHOLDER) === 0 && isset($shorthand[$data])) {
+// [LONG]         return $shorthand[$data];
+// [LONG]       }
+// [EMPTY]     }
     // LOBs greater than 4000 bytes are always stored externally.
     // pdo_ibm return bytea as stream, so we just need to use Streams API.
     // Check http://bugs.php.net/bug.php?id=37124 for more information.

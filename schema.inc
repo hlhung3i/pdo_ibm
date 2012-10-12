@@ -238,14 +238,14 @@ class DatabaseSchema_ibm extends DatabaseSchema {
 
     // Add table comment.
     if (!empty($table['description'])) {
-      $statements[] = $this->connection->prepare('COMMENT ON TABLE ' . $table_name . ' IS ' . $this->prepareComment((strlen($table['description']) > $this->COMMENT_MAX_TABLE) ? substr($table['description'], 1, $this->COMMENT_MAX_TABLE) : $table['description']));
+      $statements[] = $this->connection->prepare('COMMENT ON TABLE ' . $table_name . ' IS ' . $this->prepareComment((strlen($table['description']) > self::COMMENT_MAX_TABLE) ? substr($table['description'], 1, self::COMMENT_MAX_TABLE) : $table['description']));
     }
 
     // Add column comments.
     foreach ($table['fields'] as $field_name => $field) {
       if (!empty($field['description'])) {
         $field_name = $this->connection->escapeForDB2($field_name);
-        $statements[] = $this->connection->prepare('COMMENT ON COLUMN ' . $table_name . '.' . $field_name . ' IS ' . $this->prepareComment((strlen($field['description']) > $this->COMMENT_MAX_COLUMN) ? substr($field['description'], 1, $this->COMMENT_MAX_COLUMN) : $field['description']));
+        $statements[] = $this->connection->prepare('COMMENT ON COLUMN ' . $table_name . '.' . $field_name . ' IS ' . $this->prepareComment((strlen($field['description']) > self::COMMENT_MAX_COLUMN) ? substr($field['description'], 1, self::COMMENT_MAX_COLUMN) : $field['description']));
       }
     }
 

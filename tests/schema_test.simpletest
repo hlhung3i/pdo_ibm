@@ -122,17 +122,100 @@ class SchemaTestCase extends DrupalWebTestCase {
 // [GLOBAL] 
 // [GLOBAL] print_r($GLOBALS);
 
-    echo 'test version<br />';
-    $sql = 'SELECT service_level FROM TABLE(SYSPROC.ENV_GET_INST_INFO())';
-//    $sql = 'SELECT service_level FROM test.v1';
-    $results = db_query($sql);
-    foreach ($results as $result) {
-      $field = $result->service_level;
-      print_r($field);
-    }
+// [VERSION]     echo 'test version<br />';
+// [VERSION]     $sql = 'SELECT service_level FROM TABLE(SYSPROC.ENV_GET_INST_INFO())';
+// [VERSION] //    $sql = 'SELECT service_level FROM test.v1';
+// [VERSION]     $results = db_query($sql);
+// [VERSION]     foreach ($results as $result) {
+// [VERSION]       $field = $result->service_level;
+// [VERSION]       print_r($field);
+// [VERSION]     }
+// [VERSION] 
+// [VERSION] 
+// [VERSION]     echo '<br />test end <br />';
 
 
-    echo '<br />test end <br />';
+
+
+$schema['watchdog'] = array(
+'description' => 'Table that contains logs of all system events.',
+'fields' => array(
+'wid' => array(
+'type' => 'serial',
+'not null' => TRUE,
+'description' => 'Primary Key: Unique watchdog event ID.',
+),
+'uid' => array(
+'type' => 'int',
+'not null' => TRUE,
+'default' => 0,
+'description' => 'The {users}.uid of the user who triggered the event.',
+),
+'type' => array(
+'type' => 'varchar',
+'length' => 64,
+'not null' => TRUE,
+'default' => '',
+'description' => 'Type of log message, for example "user" or "page not found."',
+),
+'message' => array(
+'type' => 'text',
+'not null' => TRUE,
+'size' => 'big',
+'description' => 'Text of log message to be passed into the t() function.',
+),
+'variables' => array(
+'type' => 'blob',
+'not null' => TRUE,
+'size' => 'big',
+'description' => 'Serialized array of variables that match the message string and that is passed into the t() function.',
+),
+'severity' => array(
+'type' => 'int',
+'unsigned' => TRUE,
+'not null' => TRUE,
+'default' => 0,
+'size' => 'tiny',
+'description' => 'The severity level of the event; ranges from 0 (Emergency) to 7 (Debug)',
+),
+'link' => array(
+'type' => 'varchar',
+'length' => 255,
+'not null' => FALSE,
+'default' => '',
+'description' => 'Link to view the result of the event.',
+),
+'location'  => array(
+'type' => 'text',
+'not null' => TRUE,
+'description' => 'URL of the origin of the event.',
+),
+'referer' => array(
+'type' => 'text',
+'not null' => FALSE,
+'description' => 'URL of referring page.',
+),
+'hostname' => array(
+'type' => 'varchar',
+'length' => 128,
+'not null' => TRUE,
+'default' => '',
+'description' => 'Hostname of the user who triggered the event.',
+),
+'timestamp' => array(
+'type' => 'int',
+'not null' => TRUE,
+'default' => 0,
+'description' => 'Unix timestamp of when event occurred.',
+),
+),
+'primary key' => array('wid'),
+'indexes' => array(
+'type' => array('type'),
+'uid' => array('uid'),
+),
+);
+    db_create_table('watchdog', $schema['watchdog']);
 
 //db_query('CREATE OR REPLACE VIEW env_get_inst_info AS SELECT * FROM TABLE(SYSPROC.ENV_GET_INST_INFO())');
 
