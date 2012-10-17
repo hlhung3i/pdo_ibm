@@ -137,89 +137,461 @@ class SchemaTestCase extends DrupalWebTestCase {
 
 
 
-$schema['watchdog'] = array(
-'description' => 'Table that contains logs of all system events.',
-'fields' => array(
-'wid' => array(
-'type' => 'serial',
-'not null' => TRUE,
-'description' => 'Primary Key: Unique watchdog event ID.',
-),
-'uid' => array(
-'type' => 'int',
-'not null' => TRUE,
-'default' => 0,
-'description' => 'The {users}.uid of the user who triggered the event.',
-),
-'type' => array(
-'type' => 'varchar',
-'length' => 64,
-'not null' => TRUE,
-'default' => '',
-'description' => 'Type of log message, for example "user" or "page not found."',
-),
-'message' => array(
-'type' => 'text',
-'not null' => TRUE,
-'size' => 'big',
-'description' => 'Text of log message to be passed into the t() function.',
-),
-'variables' => array(
-'type' => 'blob',
-'not null' => TRUE,
-'size' => 'big',
-'description' => 'Serialized array of variables that match the message string and that is passed into the t() function.',
-),
-'severity' => array(
-'type' => 'int',
-'unsigned' => TRUE,
-'not null' => TRUE,
-'default' => 0,
-'size' => 'tiny',
-'description' => 'The severity level of the event; ranges from 0 (Emergency) to 7 (Debug)',
-),
-'link' => array(
-'type' => 'varchar',
-'length' => 255,
-'not null' => FALSE,
-'default' => '',
-'description' => 'Link to view the result of the event.',
-),
-'location'  => array(
-'type' => 'text',
-'not null' => TRUE,
-'description' => 'URL of the origin of the event.',
-),
-'referer' => array(
-'type' => 'text',
-'not null' => FALSE,
-'description' => 'URL of referring page.',
-),
-'hostname' => array(
-'type' => 'varchar',
-'length' => 128,
-'not null' => TRUE,
-'default' => '',
-'description' => 'Hostname of the user who triggered the event.',
-),
-'timestamp' => array(
-'type' => 'int',
-'not null' => TRUE,
-'default' => 0,
-'description' => 'Unix timestamp of when event occurred.',
-),
-),
-'primary key' => array('wid'),
-'indexes' => array(
-'type' => array('type'),
-'uid' => array('uid'),
-),
-);
-    db_create_table('watchdog', $schema['watchdog']);
+// [WDOG] $schema['watchdog'] = array(
+// [WDOG] 'description' => 'Table that contains logs of all system events.',
+// [WDOG] 'fields' => array(
+// [WDOG] 'wid' => array(
+// [WDOG] 'type' => 'serial',
+// [WDOG] 'not null' => TRUE,
+// [WDOG] 'description' => 'Primary Key: Unique watchdog event ID.',
+// [WDOG] ),
+// [WDOG] 'uid' => array(
+// [WDOG] 'type' => 'int',
+// [WDOG] 'not null' => TRUE,
+// [WDOG] 'default' => 0,
+// [WDOG] 'description' => 'The {users}.uid of the user who triggered the event.',
+// [WDOG] ),
+// [WDOG] 'type' => array(
+// [WDOG] 'type' => 'varchar',
+// [WDOG] 'length' => 64,
+// [WDOG] 'not null' => TRUE,
+// [WDOG] 'default' => '',
+// [WDOG] 'description' => 'Type of log message, for example "user" or "page not found."',
+// [WDOG] ),
+// [WDOG] 'message' => array(
+// [WDOG] 'type' => 'text',
+// [WDOG] 'not null' => TRUE,
+// [WDOG] 'size' => 'big',
+// [WDOG] 'description' => 'Text of log message to be passed into the t() function.',
+// [WDOG] ),
+// [WDOG] 'variables' => array(
+// [WDOG] 'type' => 'blob',
+// [WDOG] 'not null' => TRUE,
+// [WDOG] 'size' => 'big',
+// [WDOG] 'description' => 'Serialized array of variables that match the message string and that is passed into the t() function.',
+// [WDOG] ),
+// [WDOG] 'severity' => array(
+// [WDOG] 'type' => 'int',
+// [WDOG] 'unsigned' => TRUE,
+// [WDOG] 'not null' => TRUE,
+// [WDOG] 'default' => 0,
+// [WDOG] 'size' => 'tiny',
+// [WDOG] 'description' => 'The severity level of the event; ranges from 0 (Emergency) to 7 (Debug)',
+// [WDOG] ),
+// [WDOG] 'link' => array(
+// [WDOG] 'type' => 'varchar',
+// [WDOG] 'length' => 255,
+// [WDOG] 'not null' => FALSE,
+// [WDOG] 'default' => '',
+// [WDOG] 'description' => 'Link to view the result of the event.',
+// [WDOG] ),
+// [WDOG] 'location'  => array(
+// [WDOG] 'type' => 'text',
+// [WDOG] 'not null' => TRUE,
+// [WDOG] 'description' => 'URL of the origin of the event.',
+// [WDOG] ),
+// [WDOG] 'referer' => array(
+// [WDOG] 'type' => 'text',
+// [WDOG] 'not null' => FALSE,
+// [WDOG] 'description' => 'URL of referring page.',
+// [WDOG] ),
+// [WDOG] 'hostname' => array(
+// [WDOG] 'type' => 'varchar',
+// [WDOG] 'length' => 128,
+// [WDOG] 'not null' => TRUE,
+// [WDOG] 'default' => '',
+// [WDOG] 'description' => 'Hostname of the user who triggered the event.',
+// [WDOG] ),
+// [WDOG] 'timestamp' => array(
+// [WDOG] 'type' => 'int',
+// [WDOG] 'not null' => TRUE,
+// [WDOG] 'default' => 0,
+// [WDOG] 'description' => 'Unix timestamp of when event occurred.',
+// [WDOG] ),
+// [WDOG] ),
+// [WDOG] 'primary key' => array('wid'),
+// [WDOG] 'indexes' => array(
+// [WDOG] 'type' => array('type'),
+// [WDOG] 'uid' => array('uid'),
+// [WDOG] ),
+// [WDOG] );
+// [WDOG]     db_create_table('watchdog', $schema['watchdog']);
 
 //db_query('CREATE OR REPLACE VIEW env_get_inst_info AS SELECT * FROM TABLE(SYSPROC.ENV_GET_INST_INFO())');
 
+// [INSERT_MENU_ROUTER] $p_values = ':PATH, :LOAD_FUNCTIONS, :TO_ARG_FUNCTIONS, :ACCESS_CALLBACK, :ACCESS_ARGUMENTS, :PAGE_CALLBACK, :PAGE_ARGUMENTS, :DELIVERY_CALLBACK, :FIT, :NUMBER_PARTS, :CONTEXT, :TAB_PARENT, :TAB_ROOT, :TITLE, :TITLE_CALLBACK, :TITLE_ARGUMENTS, :THEME_CALLBACK, :THEME_ARGUMENTS, :TYPE, :DESCRIPTION, :POSITION, :WEIGHT, :INCLUDE_FILE';
+// [INSERT_MENU_ROUTER] $args = array(
+// [INSERT_MENU_ROUTER]   ':PATH'=>             'node',
+// [INSERT_MENU_ROUTER]   ':LOAD_FUNCTIONS'=>   '',
+// [INSERT_MENU_ROUTER]   ':TO_ARG_FUNCTIONS'=> '',
+// [INSERT_MENU_ROUTER]   ':ACCESS_CALLBACK'=>  'user_access',
+// [INSERT_MENU_ROUTER]   ':ACCESS_ARGUMENTS'=> 'a:1:{i:0;s:14:"access content";}',
+// [INSERT_MENU_ROUTER]   ':PAGE_CALLBACK'=>    'node_page_default',
+// [INSERT_MENU_ROUTER]   ':PAGE_ARGUMENTS'=>   'a:0:{}',
+// [INSERT_MENU_ROUTER]   ':DELIVERY_CALLBACK'=>'',
+// [INSERT_MENU_ROUTER]   ':FIT'=>              '1',
+// [INSERT_MENU_ROUTER]   ':NUMBER_PARTS'=>     '1',
+// [INSERT_MENU_ROUTER]   ':CONTEXT'=>          '0',
+// [INSERT_MENU_ROUTER]   ':TAB_PARENT'=>       '',
+// [INSERT_MENU_ROUTER]   ':TAB_ROOT'=>         'node',
+// [INSERT_MENU_ROUTER]   ':TITLE'=>            '',
+// [INSERT_MENU_ROUTER]   ':TITLE_CALLBACK'=>   't',
+// [INSERT_MENU_ROUTER]   ':TITLE_ARGUMENTS'=>  '',
+// [INSERT_MENU_ROUTER]   ':THEME_CALLBACK'=>   '',
+// [INSERT_MENU_ROUTER]   ':THEME_ARGUMENTS'=>  'a:0:{}',
+// [INSERT_MENU_ROUTER]   ':TYPE'=>             '0',
+// [INSERT_MENU_ROUTER]   ':DESCRIPTION'=>      '',
+// [INSERT_MENU_ROUTER]   ':POSITION'=>         '',
+// [INSERT_MENU_ROUTER]   ':WEIGHT'=>           '0',
+// [INSERT_MENU_ROUTER]   ':INCLUDE_FILE'=>     ''
+// [INSERT_MENU_ROUTER] );
+// [INSERT_MENU_ROUTER] 
+// [INSERT_MENU_ROUTER] $sql = "INSERT INTO menu_router VALUES ($p_values)";
+// [INSERT_MENU_ROUTER] echo "<br /><br />";
+// [INSERT_MENU_ROUTER] print_r($sql);
+// [INSERT_MENU_ROUTER] echo "<br /><br />";
+// [INSERT_MENU_ROUTER] print_r($args);
+// [INSERT_MENU_ROUTER] echo "<br /><br />";
+// [INSERT_MENU_ROUTER] db_query($sql, $args);
+
+// [TRUNCATE_MENU_ROUTER] $ret=db_truncate('tt')->execute();
+// [TRUNCATE_MENU_ROUTER] print_r(serialize($ret));
+// [TRUNCATE_MENU_ROUTER] $insert = db_insert('tt')
+// [TRUNCATE_MENU_ROUTER]   ->fields(array(
+// [TRUNCATE_MENU_ROUTER]     'nid',
+// [TRUNCATE_MENU_ROUTER]    ));
+// [TRUNCATE_MENU_ROUTER] $num_records = 0;
+// [TRUNCATE_MENU_ROUTER] $menu = array('0'=> 10, '1'=>11, '2'=>12);
+// [TRUNCATE_MENU_ROUTER] foreach ($menu as $path => $item) {
+// [TRUNCATE_MENU_ROUTER]   $insert->values(array(
+// [TRUNCATE_MENU_ROUTER]     'nid' => $item,
+// [TRUNCATE_MENU_ROUTER]     ));
+// [TRUNCATE_MENU_ROUTER]   $insert->execute();
+// [TRUNCATE_MENU_ROUTER]   $num_records++;
+// [TRUNCATE_MENU_ROUTER] }
+
+// ////////////////////////////////////
+
+  // menu {{{
+  $menu = 
+array (
+"rss.xml"=>array (
+  "title"=>"RSS feed",
+  "page callback"=>"node_feed",
+  "access arguments"=>array (
+    0=>"access content",
+    ),
+  "type"=>0,
+  "module"=>"node",
+  "_load_functions"=>array (),
+  "to_arg_functions"=>"",
+  "weight"=>0,
+  "_number_parts"=>1,
+  "_parts"=>array (
+    0=>"rss.xml",
+  ),
+  "_fit"=>1,
+  "_visible"=>false,
+  "_tab"=>false,
+  "tab_parent"=>"",
+  "tab_root"=>"rss.xml",
+  "access callback"=>"user_access",
+  "load_functions"=>"",
+  "page arguments"=>array (),
+  "delivery callback"=>"",
+  "title arguments"=>array (),
+  "title callback"=>"t",
+  "theme arguments"=>array (),
+  "theme callback"=>"",
+  "description"=>"",
+  "position"=>"",
+  "context"=>0,
+  "path"=>"rss.xml",
+  "file"=>"",
+  "file path"=>"",
+  "include file"=>"",
+),
+"node"=>array (
+"page callback"=>"node_page_default",
+"access arguments"=>array (
+0=>"access content",
+),
+"menu_name"=>"navigation",
+"type"=>0,
+"module"=>"node",
+"_load_functions"=>array (
+),
+"to_arg_functions"=>"",
+"title"=>"",
+"weight"=>0,
+"_number_parts"=>1,
+"_parts"=>array (
+0=>"node",
+),
+"_fit"=>1,
+"_visible"=>false,
+"_tab"=>false,
+"tab_parent"=>"",
+"tab_root"=>"node",
+"access callback"=>"user_access",
+"load_functions"=>"",
+"page arguments"=>array (
+),
+"delivery callback"=>"",
+"title arguments"=>array (
+),
+"title callback"=>"t",
+"theme arguments"=>array (
+),
+"theme callback"=>"",
+"description"=>"",
+"position"=>"",
+"context"=>0,
+"path"=>"node",
+"file"=>"",
+"file path"=>"",
+"include file"=>"",
+),
+// "batch"=>array (
+// "page callback"=>"system_batch_page",
+// "access callback"=>1,
+// "theme callback"=>"_system_batch_theme",
+// "type"=>0,
+// "file"=>"system.admin.inc",
+// "module"=>"system",
+// "_load_functions"=>array (
+// ),
+// "to_arg_functions"=>"",
+// "title"=>"",
+// "weight"=>0,
+// "_number_parts"=>1,
+// "_parts"=>array (
+// 0=>"batch",
+// ),
+// "_fit"=>1,
+// "_visible"=>false,
+// "_tab"=>false,
+// "tab_parent"=>"",
+// "tab_root"=>"batch",
+// "load_functions"=>"",
+// "access arguments"=>array (
+// ),
+// "page arguments"=>array (
+// ),
+// "delivery callback"=>"",
+// "title arguments"=>array (
+// ),
+// "title callback"=>"t",
+// "theme arguments"=>array (
+// ),
+// "description"=>"",
+// "position"=>"",
+// "context"=>0,
+// "path"=>"batch",
+// "file path"=>"",
+// "include file"=>"modules/system/system.admin.inc",
+// ),
+)
+;
+  // menu }}}
+  // mask {{{
+    $masks = 
+    array(
+      125,
+      121,
+      63,
+      62,
+      61,
+      60,
+      44,
+      31,
+      30,
+      24,
+      21,
+      15,
+      14,
+      11,
+      7,
+      5,
+      3,
+      2,
+      1,
+    );
+  // mask }}}
+
+//// {{{
+//  // Delete the existing router since we have some data to replace it.
+//  db_truncate('menu_router')->execute();
+//
+//  $insert = db_insert('menu_router')
+//    ->fields(array(
+//      'path',
+//      'load_functions',
+//      'to_arg_functions',
+//      'access_callback',
+//      'access_arguments',
+//      'page_callback',
+//      'page_arguments',
+//      'delivery_callback',
+//      'fit',
+//      'number_parts',
+//      'context',
+//      'tab_parent',
+//      'tab_root',
+//      'title',
+//      'title_callback',
+//      'title_arguments',
+//      'theme_callback',
+//      'theme_arguments',
+//      'type',
+//      'description',
+//      'position',
+//      'weight',
+//      'include_file',
+//    ));
+//
+//  $num_records = 0;
+//
+//  foreach ($menu as $path => $item) {
+//    // Fill in insert object values.
+//    $insert->values(array(
+//      'path' => $item['path'],
+//      'load_functions' => $item['load_functions'],
+//      'to_arg_functions' => $item['to_arg_functions'],
+//      'access_callback' => $item['access callback'],
+//      'access_arguments' => serialize($item['access arguments']),
+//      'page_callback' => $item['page callback'],
+//      'page_arguments' => serialize($item['page arguments']),
+//      'delivery_callback' => $item['delivery callback'],
+//      'fit' => $item['_fit'],
+//      'number_parts' => $item['_number_parts'],
+//      'context' => $item['context'],
+//      'tab_parent' => $item['tab_parent'],
+//      'tab_root' => $item['tab_root'],
+//      'title' => $item['title'],
+//      'title_callback' => $item['title callback'],
+//      'title_arguments' => ($item['title arguments'] ? serialize($item['title arguments']) : ''),
+//      'theme_callback' => $item['theme callback'],
+//      'theme_arguments' => serialize($item['theme arguments']),
+//      'type' => $item['type'],
+//      'description' => $item['description'],
+//      'position' => $item['position'],
+//      'weight' => $item['weight'],
+//      'include_file' => $item['include file'],
+//    ));
+//
+//echo 'insert:<pre>';
+//var_dump($insert);
+//echo '</pre><br/>';
+//syslog(LOG_DEBUG, 'Add menu_router: inloop: '. $item['path']);
+//
+//    // Execute in batches to avoid the memory overhead of all of those records
+//    // in the query object.
+//    if (++$num_records == 20) {
+//      $insert->execute();
+//      $num_records = 0;
+//    }
+//  }
+//
+//
+//echo 'Start Execute<br />';
+//  // Insert any remaining records.
+//  $insert->execute();
+//
+//  // Store the masks.
+//  variable_set('menu_masks', $masks);
+//
+//echo 'End of Test <br />';
+//
+//// }}}
+
+  // menu {{{
+  $menu = 
+array (
+"rss.xml"=>array (
+  "blob1"=>"",
+  "blob2"=>"",
+  "blob3"=>array (
+    0=>"access content",
+    ),
+  "blob4"=>array (),
+),
+);
+  // menu }}}
+  // mask {{{
+    $masks = 
+    array(
+      125,
+      121,
+      63,
+      62,
+      61,
+      60,
+      44,
+      31,
+      30,
+      24,
+      21,
+      15,
+      14,
+      11,
+      7,
+      5,
+      3,
+      2,
+      1,
+    );
+  // mask }}}
+// {{{
+  $tablename = 't1';
+
+  // Delete the existing router since we have some data to replace it.
+  db_truncate($tablename)->execute();
+
+  $insert = db_insert($tablename)
+    ->fields(array(
+      'path',
+      'blob1',
+//      'blob2',
+//      'blob3',
+//      'blob4',
+    ));
+
+  $num_records = 0;
+
+  foreach ($menu as $path => $item) {
+    // Fill in insert object values.
+    $insert->values(array(
+      'path' => $path,
+      'blob1' => $item['blob1'],
+//      'blob2' => $item['blob2'],
+//      'blob3' => serialize($item['blob3']),
+//      'blob4' => serialize($item['blob4']),
+    ));
+
+    // Execute in batches to avoid the memory overhead of all of those records
+    // in the query object.
+    if (++$num_records == 20) {
+      $insert->execute();
+      $num_records = 0;
+    }
   }
+
+
+echo 'Start Execute<br />';
+  // Insert any remaining records.
+  $insert->execute();
+
+  // Store the masks.
+  variable_set('menu_masks', $masks);
+
+echo 'End of Test <br />';
+
+// }}}
+
+  } // End of TestQuery()
+
+
 
   /**
    *

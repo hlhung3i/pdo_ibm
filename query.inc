@@ -23,6 +23,9 @@ class InsertQuery_ibm extends InsertQuery {
   }
 
   public function execute() {
+
+    // If validation fails, simply return NULL. Note that validation routines
+    // in preExecute() may throw exceptions instead.
     if (!$this->preExecute()) {
       return NULL;
     }
@@ -51,6 +54,13 @@ class InsertQuery_ibm extends InsertQuery {
 
     $stmt = $this->connection->prepareQuery((string) $this);
 
+    echo "stmt <br /><div>";
+    var_dump($stmt);
+    echo "</div><br />";
+    echo "this->insertValues <br /><div>";
+    var_dump($this->insertValues);
+    echo "</div><br />";
+
     try {
       $blobs = array();
       $blob_count = 0;
@@ -59,7 +69,22 @@ class InsertQuery_ibm extends InsertQuery {
         $max_placeholder = 0;
         foreach ($this->insertFields as $idx => $field) {
           if (isset($this->schema['fields'][$field]) && $this->schema['fields'][$field]['type'] == 'blob') {
-            if (!is_null($insert_values[$idx])) {
+            // BLOB Insert pass in Handling
+            //  1. NULL              : use spaceholder, pass in NULL value
+            //  2. '' (empty string) : no spaceholder and pass in, just EMPTY_BLOB() in query string
+            //  3. Normal text value : use normal spaceholder
+            if (is_null($insert_values[$idx])) {
+              // BLOB NULL is a bit different from normal case: we can't use
+              // StreamAPI, but bind NULL to target field direcly.
+              echo 'case1<br /><div>';
+              var_dump($insert_values[$idx]);
+              echo '</div><br />';
+              $stmt->bindParam(':db_insert_placeholder_' . $max_placeholder++, $insert_values[$idx], PDO::PARAM_LOB);
+            } elseif ($insert_values[$idx] === '') {
+              echo 'case2: <br />';
+              $stmt->bindValue(':db_insert_placeholder_' . $max_placeholder++, 'blob(\'\')');
+            } else {
+              echo 'case3: <br />';
               // Writing NULL into file handler means write nothing. The file
               // handler will contain an empty string but not NULL. Therefore
               // NULL will be translated as empty string when save into
@@ -73,15 +98,10 @@ class InsertQuery_ibm extends InsertQuery {
               // Pre-increment is faster in PHP than increment.
               ++$blob_count;
             }
-            else {
-              // BLOB NULL is a bit different from normal case: we can't use
-              // StreamAPI, but bind NULL to target field direcly.
-              $stmt->bindParam(':db_insert_placeholder_' . $max_placeholder++, $insert_values[$idx], PDO::PARAM_LOB);
-            }
           }
-// [EMPTY]            elseif ($insert_values[$idx] === '') {
-// [EMPTY]              $stmt->bindValue(':db_insert_placeholder_' . $max_placeholder++, DB2_EMPTY_STRING_PLACEHOLDER);
-// [EMPTY]            }
+          elseif ($insert_values[$idx] === '') {
+            $stmt->bindValue(':db_insert_placeholder_' . $max_placeholder++, DB2_EMPTY_STRING_PLACEHOLDER);
+          }
           else {
             $stmt->bindParam(':db_insert_placeholder_' . $max_placeholder++, $insert_values[$idx]);
           }
@@ -117,22 +137,26 @@ class InsertQuery_ibm extends InsertQuery {
         // the foreach statement assigns the element to the existing reference.
         $arguments = $this->fromQuery->getArguments();
         foreach ($arguments as $key => $value) {
-// [EMPTY]            if ($arguments[$key] === '') {
-// [EMPTY]              $stmt->bindValue($key, DB2_EMPTY_STRING_PLACEHOLDER);
-// [EMPTY]            }
-// [EMPTY]            else {
+          if ($arguments[$key] === '') {
+            $stmt->bindValue($key, DB2_EMPTY_STRING_PLACEHOLDER);
+          }
+          else {
             $stmt->bindParam($key, $arguments[$key]);
-// [EMPTY]            }
+          }
         }
       }
 
-      // All default query.
+      // If no values have been added, insert all by default query.
       if (count($this->insertValues) == 0) {
         // Only use the returned last_insert_id if it is not already set.
         $last_insert_id = $this->connection->query($stmt, array(), $options);
       }
     }
     catch (Exception $e) {
+//      syslog(LOG_DEBUG, '  Exception Caught:');
+      echo 'Exception Caught<br /><div>';
+      var_dump($e);
+      echo '</ div>';
       // One of the INSERTs failed, rollback the whole batch.
       $transaction->rollback();
       // Rethrow the exception for the calling code.
@@ -142,8 +166,12 @@ class InsertQuery_ibm extends InsertQuery {
     // Re-initialize the values array so that we can re-use this query.
     $this->insertValues = array();
 
+    echo " LastInsertId: $last_insert_id<br />";
+    syslog(LOG_DEBUG, '  LastInsertId: '.$last_insert_id);
+
     // Transaction commits here where $transaction looses scope.
 
+    syslog(LOG_DEBUG, 'Exit InsertQuery->execute');
     return $last_insert_id;
   }
 
@@ -183,8 +211,16 @@ class InsertQuery_ibm extends InsertQuery {
 
       $i = 0;
       foreach ($this->insertFields as $field) {
-        // BLOB field insert in DB2 no need special handling
-				$placeholders[] = ':db_insert_placeholder_' . $i;
+        if (isset($this->schema['fields'][$field]) && $this->schema['fields'][$field]['type'] == 'blob') {
+        // BLOB field insert in DB2 need handle:
+        //  1. Empty string
+          $placeholders[] = 'EMPTY_BLOB()';
+          $blob_fields[] = $this->connection->escapeForDB2($field);
+          $blob_placeholders[] = ':db_insert_placeholder_' . $i;
+        }
+        else {
+          $placeholders[] = ':db_insert_placeholder_' . $i;
+        }
         ++$i;
       }
       $query .= '(' . implode(', ', $placeholders) . ')';
@@ -206,6 +242,17 @@ class TruncateQuery_ibm extends TruncateQuery {
     $comments = $this->connection->makeComment($this->comments);
 
     return $comments . 'TRUNCATE TABLE {' . $this->table . '} IMMEDIATE';
+  }
+
+  public function execute() {
+
+    // start a new transaction to avoid SQL0428N Exception
+    //   SQL0428N The SQL statement is only allowed as the first statement in a unit of work.
+    //   You need run 'ROLLBACK' or 'COMMIT' before the statement
+    $this->connection->commit();
+    
+//    syslog(LOG_DEBUG, 'query.inc TruncateQuery->execute: '.(string)$this);
+    return $this->connection->query((string) $this, array(), $this->queryOptions);
   }
 }
 
@@ -296,12 +343,12 @@ class UpdateQuery_ibm extends UpdateQuery {
           // We assume that an expression will never happen on a BLOB field,
           // which is a fairly safe assumption to make since in most cases
           // it would be an invalid query anyway.
-// [EMPTY]            if ($data['arguments'][$placeholder] === '') {
-// [EMPTY]              $stmt->bindValue($placeholder, DB2_EMPTY_STRING_PLACEHOLDER);
-// [EMPTY]            }
-// [EMPTY]            else {
+          if ($data['arguments'][$placeholder] === '') {
+            $stmt->bindValue($placeholder, DB2_EMPTY_STRING_PLACEHOLDER);
+          }
+          else {
             $stmt->bindParam($placeholder, $data['arguments'][$placeholder]);
-// [EMPTY]            }
+          }
         }
       }
       unset($fields[$field]);
@@ -325,9 +372,9 @@ class UpdateQuery_ibm extends UpdateQuery {
           $stmt->bindParam(':db_update_placeholder_' . $max_placeholder++, $fields[$field], PDO::PARAM_LOB);
         }
       }
-// [EMPTY]        elseif ($fields[$field] === '') {
-// [EMPTY]          $stmt->bindValue(':db_update_placeholder_' . $max_placeholder++, DB2_EMPTY_STRING_PLACEHOLDER);
-// [EMPTY]        }
+      elseif ($fields[$field] === '') {
+        $stmt->bindValue(':db_update_placeholder_' . $max_placeholder++, DB2_EMPTY_STRING_PLACEHOLDER);
+      }
       else {
         $stmt->bindParam(':db_update_placeholder_' . $max_placeholder++, $fields[$field]);
       }
@@ -338,12 +385,12 @@ class UpdateQuery_ibm extends UpdateQuery {
 
       $arguments = $this->condition->arguments();
       foreach ($arguments as $placeholder => $value) {
-// [EMPTY]          if ($arguments[$placeholder] === '') {
-// [EMPTY]            $stmt->bindValue($placeholder, DB2_EMPTY_STRING_PLACEHOLDER);
-// [EMPTY]          }
-// [EMPTY]          else {
+        if ($arguments[$placeholder] === '') {
+          $stmt->bindValue($placeholder, DB2_EMPTY_STRING_PLACEHOLDER);
+        }
+        else {
           $stmt->bindParam($placeholder, $arguments[$placeholder]);
-// [EMPTY]          }
+        }
       }
     }
 
@@ -375,7 +422,15 @@ class UpdateQuery_ibm extends UpdateQuery {
     $blob_fields = array();
     $blob_placeholders = array();
     foreach ($fields as $field => $value) {
-      $update_fields[] = $this->connection->escapeForDB2($field) . ' = :db_update_placeholder_' . $max_placeholder++;
+      if (isset($this->schema['fields'][$field]) && $this->schema['fields'][$field]['type'] == 'blob') {
+        // BLOB field update in DB2 required additional handling with
+        $update_fields[] = $this->connection->escapeForDB2($field) . ' = EMPTY_BLOB()';
+        $blob_fields[] = $this->connection->escapeForDB2($field);
+        $blob_placeholders[] = ':db_update_placeholder_' . $max_placeholder++;
+      }
+      else {
+        $update_fields[] = $this->connection->escapeForDB2($field) . ' = :db_update_placeholder_' . $max_placeholder++;
+      }
     }
 
     $query = $comments . 'UPDATE ' . $table_name . ' SET ' . implode(', ', $update_fields);

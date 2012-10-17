@@ -122,12 +122,12 @@ class DatabaseConnection_ibm extends DatabaseConnection {
     try {
       if ($query instanceof DatabaseStatementInterface) {
         $stmt = $query;
-        $stmt->execute(NULL, $options);
+        $tt = $stmt->execute(NULL, $options);
       }
       else {
         $this->expandArguments($query, $args);
         $stmt = $this->prepareQuery($query);
-        $stmt->execute($args, $options);
+        $stmt->execute($args, $options); // DEATH point, throw PDOException
       }
 
       switch ($options['return']) {
@@ -144,6 +144,10 @@ class DatabaseConnection_ibm extends DatabaseConnection {
       }
     }
     catch (PDOException $e) {
+      echo 'PDOException <br /><div>';
+      var_dump($e);
+      echo '</div><br />';
+
       if ($options['throw_exception']) {
         // Add additional debug information.
         if ($query instanceof DatabaseStatementInterface) {
@@ -533,6 +537,11 @@ class DatabaseConnection_ibm extends DatabaseConnection {
         }
       }
     }
+  }
+
+  public function commit() {
+    $this->query('COMMIT');
+    return;
   }
 
   /**
