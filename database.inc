@@ -144,9 +144,9 @@ class DatabaseConnection_ibm extends DatabaseConnection {
       }
     }
     catch (PDOException $e) {
-      echo 'PDOException <br /><div>';
-      var_dump($e);
-      echo '</div><br />';
+//      echo 'DatabaseConnection_ibm->query() PDOException <br /><div>';
+//      var_dump($e);
+//      echo '</div><br />';
 
       if ($options['throw_exception']) {
         // Add additional debug information.

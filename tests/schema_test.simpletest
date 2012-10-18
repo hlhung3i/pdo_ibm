@@ -509,7 +509,7 @@ array (
   $menu = 
 array (
 "rss.xml"=>array (
-  "blob1"=>"",
+  "blob1"=>'',
   "blob2"=>"",
   "blob3"=>array (
     0=>"access content",
