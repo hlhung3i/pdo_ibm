@@ -505,89 +505,151 @@ array (
 //
 //// }}}
 
-  // menu {{{
-  $menu = 
-array (
-"rss.xml"=>array (
-  "blob1"=>'',
-  "blob2"=>"",
-  "blob3"=>array (
-    0=>"access content",
-    ),
-  "blob4"=>array (),
-),
-);
-  // menu }}}
-  // mask {{{
-    $masks = 
-    array(
-      125,
-      121,
-      63,
-      62,
-      61,
-      60,
-      44,
-      31,
-      30,
-      24,
-      21,
-      15,
-      14,
-      11,
-      7,
-      5,
-      3,
-      2,
-      1,
-    );
-  // mask }}}
-// {{{
-  $tablename = 't1';
+// [INSERTBLOB]   // menu {{{
+// [INSERTBLOB]   $menu = 
+// [INSERTBLOB] array (
+// [INSERTBLOB] "rss.xml"=>array (
+// [INSERTBLOB]   "blob1"=>'',
+// [INSERTBLOB]   "blob2"=>"",
+// [INSERTBLOB]   "blob3"=>array (
+// [INSERTBLOB]     0=>"access content",
+// [INSERTBLOB]     ),
+// [INSERTBLOB]   "blob4"=>array (),
+// [INSERTBLOB] ),
+// [INSERTBLOB] );
+// [INSERTBLOB]   // menu }}}
+// [INSERTBLOB]   // mask {{{
+// [INSERTBLOB]     $masks = 
+// [INSERTBLOB]     array(
+// [INSERTBLOB]       125,
+// [INSERTBLOB]       121,
+// [INSERTBLOB]       63,
+// [INSERTBLOB]       62,
+// [INSERTBLOB]       61,
+// [INSERTBLOB]       60,
+// [INSERTBLOB]       44,
+// [INSERTBLOB]       31,
+// [INSERTBLOB]       30,
+// [INSERTBLOB]       24,
+// [INSERTBLOB]       21,
+// [INSERTBLOB]       15,
+// [INSERTBLOB]       14,
+// [INSERTBLOB]       11,
+// [INSERTBLOB]       7,
+// [INSERTBLOB]       5,
+// [INSERTBLOB]       3,
+// [INSERTBLOB]       2,
+// [INSERTBLOB]       1,
+// [INSERTBLOB]     );
+// [INSERTBLOB]   // mask }}}
+// [INSERTBLOB] // {{{
+// [INSERTBLOB]   $tablename = 't1';
+// [INSERTBLOB] 
+// [INSERTBLOB]   // Delete the existing router since we have some data to replace it.
+// [INSERTBLOB]   db_truncate($tablename)->execute();
+// [INSERTBLOB] 
+// [INSERTBLOB]   $insert = db_insert($tablename)
+// [INSERTBLOB]     ->fields(array(
+// [INSERTBLOB]       'path',
+// [INSERTBLOB]       'blob1',
+// [INSERTBLOB] //      'blob2',
+// [INSERTBLOB] //      'blob3',
+// [INSERTBLOB] //      'blob4',
+// [INSERTBLOB]     ));
+// [INSERTBLOB] 
+// [INSERTBLOB]   $num_records = 0;
+// [INSERTBLOB] 
+// [INSERTBLOB]   foreach ($menu as $path => $item) {
+// [INSERTBLOB]     // Fill in insert object values.
+// [INSERTBLOB]     $insert->values(array(
+// [INSERTBLOB]       'path' => $path,
+// [INSERTBLOB]       'blob1' => $item['blob1'],
+// [INSERTBLOB] //      'blob2' => $item['blob2'],
+// [INSERTBLOB] //      'blob3' => serialize($item['blob3']),
+// [INSERTBLOB] //      'blob4' => serialize($item['blob4']),
+// [INSERTBLOB]     ));
+// [INSERTBLOB] 
+// [INSERTBLOB]     // Execute in batches to avoid the memory overhead of all of those records
+// [INSERTBLOB]     // in the query object.
+// [INSERTBLOB]     if (++$num_records == 20) {
+// [INSERTBLOB]       $insert->execute();
+// [INSERTBLOB]       $num_records = 0;
+// [INSERTBLOB]     }
+// [INSERTBLOB]   }
+// [INSERTBLOB] 
+// [INSERTBLOB] 
+// [INSERTBLOB] echo 'Start Execute<br />';
+// [INSERTBLOB]   // Insert any remaining records.
+// [INSERTBLOB]   $insert->execute();
+// [INSERTBLOB] 
+// [INSERTBLOB]   // Store the masks.
+// [INSERTBLOB]   variable_set('menu_masks', $masks);
+// [INSERTBLOB] 
+// [INSERTBLOB] echo 'End of Test <br />';
+// [INSERTBLOB] 
+// [INSERTBLOB] // }}}
 
-  // Delete the existing router since we have some data to replace it.
-  db_truncate($tablename)->execute();
 
-  $insert = db_insert($tablename)
-    ->fields(array(
-      'path',
-      'blob1',
-//      'blob2',
-//      'blob3',
-//      'blob4',
-    ));
+require_once DRUPAL_ROOT . '/modules/user/user.module';
 
-  $num_records = 0;
+require_once DRUPAL_ROOT . '/includes/actions.inc';
+require_once DRUPAL_ROOT . '/includes/ajax.inc';
+require_once DRUPAL_ROOT . '/includes/archiver.inc';
+require_once DRUPAL_ROOT . '/includes/authorize.inc';
+require_once DRUPAL_ROOT . '/includes/batch.inc';
+require_once DRUPAL_ROOT . '/includes/batch.queue.inc';
+//require_once DRUPAL_ROOT . '/includes/bootstrap.inc';
+require_once DRUPAL_ROOT . '/includes/cache.inc';
+require_once DRUPAL_ROOT . '/includes/cache-install.inc';
+require_once DRUPAL_ROOT . '/includes/common.inc';
+require_once DRUPAL_ROOT . '/includes/date.inc';
+require_once DRUPAL_ROOT . '/includes/entity.inc';
+require_once DRUPAL_ROOT . '/includes/errors.inc';
+require_once DRUPAL_ROOT . '/includes/file.inc';
+require_once DRUPAL_ROOT . '/includes/file.mimetypes.inc';
+require_once DRUPAL_ROOT . '/includes/form.inc';
+require_once DRUPAL_ROOT . '/includes/graph.inc';
+require_once DRUPAL_ROOT . '/includes/image.inc';
+require_once DRUPAL_ROOT . '/includes/install.core.inc';
+require_once DRUPAL_ROOT . '/includes/install.inc';
+require_once DRUPAL_ROOT . '/includes/iso.inc';
+require_once DRUPAL_ROOT . '/includes/json-encode.inc';
+require_once DRUPAL_ROOT . '/includes/language.inc';
+require_once DRUPAL_ROOT . '/includes/locale.inc';
+require_once DRUPAL_ROOT . '/includes/lock.inc';
+require_once DRUPAL_ROOT . '/includes/mail.inc';
+require_once DRUPAL_ROOT . '/includes/menu.inc';
+require_once DRUPAL_ROOT . '/includes/module.inc';
+require_once DRUPAL_ROOT . '/includes/pager.inc';
+require_once DRUPAL_ROOT . '/includes/password.inc';
+require_once DRUPAL_ROOT . '/includes/path.inc';
+require_once DRUPAL_ROOT . '/includes/registry.inc';
+require_once DRUPAL_ROOT . '/includes/session.inc';
+require_once DRUPAL_ROOT . '/includes/stream_wrappers.inc';
+require_once DRUPAL_ROOT . '/includes/tablesort.inc';
+require_once DRUPAL_ROOT . '/includes/theme.inc';
+require_once DRUPAL_ROOT . '/includes/theme.maintenance.inc';
+require_once DRUPAL_ROOT . '/includes/token.inc';
+require_once DRUPAL_ROOT . '/includes/unicode.entities.inc';
+require_once DRUPAL_ROOT . '/includes/unicode.inc';
+require_once DRUPAL_ROOT . '/includes/update.inc';
+require_once DRUPAL_ROOT . '/includes/updater.inc';
+require_once DRUPAL_ROOT . '/includes/utility.inc';
+require_once DRUPAL_ROOT . '/includes/xmlrpc.inc';
+require_once DRUPAL_ROOT . '/includes/xmlrpcs.inc';
 
-  foreach ($menu as $path => $item) {
-    // Fill in insert object values.
-    $insert->values(array(
-      'path' => $path,
-      'blob1' => $item['blob1'],
-//      'blob2' => $item['blob2'],
-//      'blob3' => serialize($item['blob3']),
-//      'blob4' => serialize($item['blob4']),
-    ));
+//require_once DRUPAL_ROOT . '/' . variable_get('password_inc', 'includes/password.inc');
+openlog('USERROLESAVE', LOG_PERROR, LOG_LOCAL0);
+// Create a default role for site administrators, with all available permissions assigned.
+$admin_role = new stdClass();
+$admin_role->name = 'administrator';
+$admin_role->weight = 2;
+syslog (LOG_DEBUG, serialize($admin_role));
+user_role_save($admin_role);
+syslog (LOG_DEBUG, serialize($admin_role));
+closelog();
 
-    // Execute in batches to avoid the memory overhead of all of those records
-    // in the query object.
-    if (++$num_records == 20) {
-      $insert->execute();
-      $num_records = 0;
-    }
-  }
-
-
-echo 'Start Execute<br />';
-  // Insert any remaining records.
-  $insert->execute();
-
-  // Store the masks.
-  variable_set('menu_masks', $masks);
-
-echo 'End of Test <br />';
-
-// }}}
+echo 'End of Test<br />';
 
   } // End of TestQuery()
 

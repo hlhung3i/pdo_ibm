@@ -54,12 +54,21 @@ class InsertQuery_ibm extends InsertQuery {
 
     $stmt = $this->connection->prepareQuery((string) $this);
 
+    $sql = (string)$this;
+
     try {
       $blobs = array();
       $blob_count = 0;
       foreach ($this->insertValues as $insert_values) {
 
         $max_placeholder = 0;
+        if (strpos($sql, 'role_permission') > 0) {
+          openlog("INSERT_RP", LOG_PERROR, LOG_LOCAL0);
+          syslog(LOG_DEBUG, 'Insert Role Permission');
+          syslog(LOG_DEBUG, '  '.$sql);
+          syslog(LOG_DEBUG, '  '.serialize($insert_values));
+          closelog();
+        }
         foreach ($this->insertFields as $idx => $field) {
           if (isset($this->schema['fields'][$field]) && $this->schema['fields'][$field]['type'] == 'blob') {
             // BLOB Insert pass in Handling
@@ -158,11 +167,8 @@ class InsertQuery_ibm extends InsertQuery {
     // Re-initialize the values array so that we can re-use this query.
     $this->insertValues = array();
 
-    syslog(LOG_DEBUG, '  LastInsertId: '.$last_insert_id);
-
     // Transaction commits here where $transaction looses scope.
 
-    syslog(LOG_DEBUG, 'Exit InsertQuery->execute');
     return $last_insert_id;
   }
 
@@ -247,7 +253,6 @@ class TruncateQuery_ibm extends TruncateQuery {
     //   You need run 'ROLLBACK' or 'COMMIT' before the statement
     $this->connection->commit();
     
-//    syslog(LOG_DEBUG, 'query.inc TruncateQuery->execute: '.(string)$this);
     return $this->connection->query((string) $this, array(), $this->queryOptions);
   }
 }
